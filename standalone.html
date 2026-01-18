@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linton Evans | Technical Specialist - 3D Portfolio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Inter', sans-serif; background: #000; color: #fff; }
+
+    /* Neural Network Background - ALWAYS visible */
+    #neural-bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 0;
+      background: #0a0a15;
+    }
+
+    #canvas-container {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 1;
+    }
+
+    #loading-screen {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: transparent;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 1000; transition: opacity 0.8s ease;
+    }
+    #loading-screen.hidden { opacity: 0; pointer-events: none; }
+
+    .loading-box {
+      width: 80px; height: 80px; position: relative;
+      transform-style: preserve-3d; animation: rotateBox 2s ease-in-out infinite;
+    }
+    .loading-box::before {
+      content: ''; position: absolute; width: 100%; height: 100%;
+      background: linear-gradient(135deg, #a3e635, #65a30d);
+      border-radius: 8px; animation: pulse 1s ease-in-out infinite alternate;
+    }
+    @keyframes rotateBox { 0%,100%{transform:rotateY(0deg)} 50%{transform:rotateY(180deg)} }
+    @keyframes pulse { from{box-shadow:0 0 20px rgba(163,230,53,0.4)} to{box-shadow:0 0 40px rgba(163,230,53,0.8)} }
+    .loading-text { margin-top: 30px; font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; color: #a3e635; letter-spacing: 2px; }
+    .loading-progress { margin-top: 20px; width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+    .loading-progress-bar { height: 100%; background: linear-gradient(90deg, #a3e635, #65a30d); width: 0%; transition: width 0.3s; }
+
+    #ui-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
+    #ui-overlay > * { pointer-events: auto; }
+
+    #start-btn {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      padding: 18px 50px; font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.1rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+      background: linear-gradient(135deg, #a3e635, #65a30d);
+      color: #0a0a0f; border: none; border-radius: 50px; cursor: pointer;
+      box-shadow: 0 0 30px rgba(163, 230, 53, 0.4); display: none; z-index: 200;
+    }
+    #start-btn:hover { transform: translate(-50%, -50%) scale(1.05); box-shadow: 0 0 50px rgba(163, 230, 53, 0.6); }
+    #start-btn.visible { display: block; animation: fadeIn 0.5s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translate(-50%,-40%)} to{opacity:1;transform:translate(-50%,-50%)} }
+
+    .nav-container {
+      position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+      display: none; gap: 12px; background: rgba(10, 10, 15, 0.8);
+      backdrop-filter: blur(20px); padding: 12px 20px; border-radius: 50px;
+      border: 1px solid rgba(163, 230, 53, 0.2);
+    }
+    .nav-btn { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.3); border: none; cursor: pointer; }
+    .nav-btn:hover { background: rgba(163, 230, 53, 0.6); transform: scale(1.2); }
+    .nav-btn.active { background: #a3e635; box-shadow: 0 0 15px rgba(163, 230, 53, 0.6); }
+
+    .audio-controls { position: absolute; top: 30px; right: 30px; display: flex; gap: 10px; }
+    .audio-btn {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(10, 10, 15, 0.8); backdrop-filter: blur(20px);
+      border: 1px solid rgba(163, 230, 53, 0.3); color: #fff;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .audio-btn:hover { border-color: #a3e635; background: rgba(163, 230, 53, 0.1); }
+    .audio-btn svg { width: 20px; height: 20px; }
+
+    .info-panel {
+      position: absolute; max-width: 320px; z-index: 500;
+      background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(20px);
+      padding: 25px; border-radius: 16px; border: 1px solid rgba(163, 230, 53, 0.2);
+      opacity: 0; transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    .info-panel.visible { opacity: 1; }
+    /* Position variants for info panel */
+    .info-panel.pos-top-left { top: 30px; left: 30px; transform: translate(-20px, 0); }
+    .info-panel.pos-top-left.visible { transform: translate(0, 0); }
+    .info-panel.pos-top-right { top: 30px; right: 30px; left: auto; transform: translate(20px, 0); }
+    .info-panel.pos-top-right.visible { transform: translate(0, 0); }
+    .info-panel.pos-bottom-left { bottom: 140px; top: auto; left: 30px; transform: translate(-20px, 0); }
+    .info-panel.pos-bottom-left.visible { transform: translate(0, 0); }
+    .info-panel.pos-bottom-right { bottom: 140px; top: auto; right: 30px; left: auto; transform: translate(20px, 0); }
+    .info-panel.pos-bottom-right.visible { transform: translate(0, 0); }
+    .info-panel h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 8px; color: #a3e635; }
+    .info-panel h3 { font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-bottom: 15px; }
+    .info-panel p { font-size: 0.85rem; line-height: 1.5; color: rgba(255,255,255,0.85); white-space: pre-line; }
+
+    .speech-bubble {
+      position: absolute; max-width: 450px; z-index: 500;
+      background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(20px);
+      padding: 18px 28px; border-radius: 20px; border: 1px solid rgba(163, 230, 53, 0.3);
+      opacity: 0; transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(163, 230, 53, 0.1);
+    }
+    .speech-bubble::before {
+      content: ''; position: absolute; width: 0; height: 0;
+      border: 10px solid transparent;
+    }
+    .speech-bubble.visible { opacity: 1; }
+    /* Position variants for speech bubble */
+    .speech-bubble.pos-top-left { top: 30px; left: 30px; transform: translate(-20px, -20px) scale(0.9); }
+    .speech-bubble.pos-top-left.visible { transform: translate(0, 0) scale(1); }
+    .speech-bubble.pos-top-left::before { bottom: -20px; left: 30px; border-top-color: rgba(163, 230, 53, 0.3); }
+    .speech-bubble.pos-top-right { top: 30px; right: 30px; left: auto; transform: translate(20px, -20px) scale(0.9); }
+    .speech-bubble.pos-top-right.visible { transform: translate(0, 0) scale(1); }
+    .speech-bubble.pos-top-right::before { bottom: -20px; right: 30px; border-top-color: rgba(163, 230, 53, 0.3); }
+    .speech-bubble.pos-bottom-left { bottom: 140px; top: auto; left: 30px; transform: translate(-20px, 20px) scale(0.9); }
+    .speech-bubble.pos-bottom-left.visible { transform: translate(0, 0) scale(1); }
+    .speech-bubble.pos-bottom-left::before { top: -20px; left: 30px; border-bottom-color: rgba(163, 230, 53, 0.3); }
+    .speech-bubble.pos-bottom-right { bottom: 140px; top: auto; right: 30px; left: auto; transform: translate(20px, 20px) scale(0.9); }
+    .speech-bubble.pos-bottom-right.visible { transform: translate(0, 0) scale(1); }
+    .speech-bubble.pos-bottom-right::before { top: -20px; right: 30px; border-bottom-color: rgba(163, 230, 53, 0.3); }
+    .speech-bubble.pos-center { bottom: 140px; left: 50%; transform: translateX(-50%) translateY(20px) scale(0.9); }
+    .speech-bubble.pos-center.visible { transform: translateX(-50%) translateY(0) scale(1); }
+    .speech-bubble.pos-center::before { display: none; }
+    .speech-bubble p { font-size: 0.95rem; line-height: 1.6; text-align: left; }
+    .speech-bubble .section-icon { display: inline-block; margin-right: 10px; color: #a3e635; }
+
+    #pdf-booklet {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.3) rotateY(90deg);
+      display: none; z-index: 150; perspective: 2000px;
+      opacity: 0;
+      transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s ease;
+    }
+    #pdf-booklet.visible {
+      display: block;
+      transform: translate(-50%, -50%) scale(1) rotateY(0deg);
+      opacity: 1;
+    }
+    .booklet-container {
+      position: relative;
+      width: 450px; height: 620px;
+      transform-style: preserve-3d;
+      transform: scale(1);
+      transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .booklet-container.zoomed { transform: scale(1.4); }
+    .booklet-container.zoomed-max { transform: scale(1.8); }
+
+    /* Single page view - main page container */
+    .page-stack {
+      position: relative;
+      width: 100%; height: 580px;
+      transform-style: preserve-3d;
+    }
+
+    /* Individual page styling */
+    .pdf-page {
+      position: absolute;
+      width: 430px; height: 580px;
+      left: 50%; top: 0;
+      transform: translateX(-50%);
+      background: #fff; border-radius: 8px;
+      box-shadow: 0 15px 50px rgba(0,0,0,0.6), 0 5px 15px rgba(0,0,0,0.3);
+      overflow: hidden; cursor: zoom-in;
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+    }
+    .pdf-page:hover { box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 8px 20px rgba(0,0,0,0.4); }
+    .booklet-container.zoomed .pdf-page, .booklet-container.zoomed-max .pdf-page { cursor: zoom-out; }
+    .pdf-page canvas { width: 100%; height: 100%; object-fit: contain; }
+
+    /* Current page - visible */
+    .pdf-page.current {
+      z-index: 10;
+      transform: translateX(-50%);
+      opacity: 1;
+    }
+
+    /* Next page - hidden underneath */
+    .pdf-page.next {
+      z-index: 5;
+      transform: translateX(-50%);
+      opacity: 0;
+    }
+
+    /* Page turn animations - natural corner peel effect */
+    .pdf-page.turning-out {
+      animation: cornerPeelOut 0.9s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+      z-index: 15;
+      transform-origin: bottom left;
+    }
+    .pdf-page.turning-in {
+      animation: fadeReveal 0.9s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+      z-index: 10;
+    }
+
+    /* Backward page turn */
+    .pdf-page.turning-back-out {
+      animation: cornerPeelBackOut 0.9s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+      z-index: 15;
+      transform-origin: bottom right;
+    }
+    .pdf-page.turning-back-in {
+      animation: fadeReveal 0.9s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+      z-index: 10;
+    }
+
+    /* Forward turn - corner peels from top-right, curling over */
+    @keyframes cornerPeelOut {
+      0% {
+        transform: translateX(-50%) rotateZ(0deg) rotateY(0deg) rotateX(0deg);
+        opacity: 1;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.6);
+      }
+      15% {
+        transform: translateX(-50%) rotateZ(-2deg) rotateY(-5deg) rotateX(2deg);
+        opacity: 1;
+        box-shadow: 5px 15px 45px rgba(0,0,0,0.5);
+      }
+      40% {
+        transform: translateX(-48%) rotateZ(-8deg) rotateY(-45deg) rotateX(5deg);
+        opacity: 1;
+        box-shadow: 15px 10px 35px rgba(0,0,0,0.4);
+      }
+      70% {
+        transform: translateX(-40%) rotateZ(-12deg) rotateY(-110deg) rotateX(8deg);
+        opacity: 0.7;
+        box-shadow: 25px 5px 25px rgba(0,0,0,0.25);
+      }
+      100% {
+        transform: translateX(-30%) rotateZ(-15deg) rotateY(-160deg) rotateX(10deg);
+        opacity: 0;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      }
+    }
+
+    /* New page fades in from underneath */
+    @keyframes fadeReveal {
+      0% {
+        transform: translateX(-50%) scale(0.98);
+        opacity: 0;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+      }
+      40% {
+        transform: translateX(-50%) scale(0.99);
+        opacity: 0.3;
+      }
+      100% {
+        transform: translateX(-50%) scale(1);
+        opacity: 1;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.6);
+      }
+    }
+
+    /* Backward turn - corner peels from top-left */
+    @keyframes cornerPeelBackOut {
+      0% {
+        transform: translateX(-50%) rotateZ(0deg) rotateY(0deg) rotateX(0deg);
+        opacity: 1;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.6);
+      }
+      15% {
+        transform: translateX(-50%) rotateZ(2deg) rotateY(5deg) rotateX(2deg);
+        opacity: 1;
+        box-shadow: -5px 15px 45px rgba(0,0,0,0.5);
+      }
+      40% {
+        transform: translateX(-52%) rotateZ(8deg) rotateY(45deg) rotateX(5deg);
+        opacity: 1;
+        box-shadow: -15px 10px 35px rgba(0,0,0,0.4);
+      }
+      70% {
+        transform: translateX(-60%) rotateZ(12deg) rotateY(110deg) rotateX(8deg);
+        opacity: 0.7;
+        box-shadow: -25px 5px 25px rgba(0,0,0,0.25);
+      }
+      100% {
+        transform: translateX(-70%) rotateZ(15deg) rotateY(160deg) rotateX(10deg);
+        opacity: 0;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      }
+    }
+
+    /* Page shadow/depth stack effect */
+    .page-stack::before {
+      content: '';
+      position: absolute;
+      width: 428px; height: 578px;
+      left: 50%; top: 2px;
+      transform: translateX(-50%);
+      background: #f5f5f5;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      z-index: 1;
+    }
+    .page-stack::after {
+      content: '';
+      position: absolute;
+      width: 426px; height: 576px;
+      left: 50%; top: 4px;
+      transform: translateX(-50%);
+      background: #eee;
+      border-radius: 8px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+      z-index: 0;
+    }
+
+    /* Hide spine in single page mode */
+    .booklet-spine { display: none; }
+
+    .booklet-nav { position: absolute; bottom: -70px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 15px; background: rgba(10,10,15,0.9); padding: 14px 28px; border-radius: 35px; border: 1px solid rgba(163,230,53,0.3); }
+    .booklet-nav button { width: 40px; height: 40px; border-radius: 50%; background: rgba(163,230,53,0.2); border: 1px solid rgba(163,230,53,0.4); color: #a3e635; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
+    .booklet-nav button:hover:not(:disabled) { background: rgba(163,230,53,0.4); transform: scale(1.1); }
+    .booklet-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+    .booklet-nav button svg { width: 20px; height: 20px; }
+    .page-indicator { font-family: 'Space Grotesk', sans-serif; font-size: 0.9rem; color: #fff; min-width: 80px; text-align: center; }
+    .booklet-close { position: absolute; top: -50px; right: 10px; width: 40px; height: 40px; border-radius: 50%; background: rgba(10,10,15,0.9); border: 1px solid rgba(255,255,255,0.2); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
+    .booklet-close:hover { background: rgba(255,100,100,0.3); transform: scale(1.1); }
+    #zoom-btn { background: rgba(74,144,217,0.2); border-color: rgba(74,144,217,0.4); color: #4a90d9; }
+    #zoom-btn.active { background: rgba(74,144,217,0.5); }
+
+    #view-cv-btn { position: absolute; top: 30px; left: 50%; transform: translateX(-50%); padding: 10px 24px; font-family: 'Space Grotesk', sans-serif; font-size: 0.9rem; background: rgba(10,10,15,0.8); backdrop-filter: blur(20px); border: 1px solid rgba(163,230,53,0.4); color: #a3e635; border-radius: 25px; cursor: pointer; display: none; }
+    #view-cv-btn.visible { display: block; }
+    #view-cv-btn:hover { background: rgba(163,230,53,0.2); }
+  </style>
+</head>
+<body>
+  <canvas id="neural-bg"></canvas>
+  <div id="canvas-container"></div>
+
+  <div id="loading-screen">
+    <div class="loading-box"></div>
+    <div class="loading-text">LOADING PORTFOLIO</div>
+    <div class="loading-progress"><div class="loading-progress-bar" id="progress-bar"></div></div>
+  </div>
+
+  <div id="pdf-booklet">
+    <div class="booklet-container">
+      <div class="page-stack">
+        <div class="pdf-page current" id="page-current"><canvas id="canvas-current"></canvas></div>
+        <div class="pdf-page next" id="page-next"><canvas id="canvas-next"></canvas></div>
+      </div>
+    </div>
+    <button class="booklet-close" id="close-booklet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+    <div class="booklet-nav">
+      <button id="prev-page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+      <span class="page-indicator" id="page-indicator">1 / 4</span>
+      <button id="next-page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+      <button id="zoom-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg></button>
+    </div>
+  </div>
+
+  <div id="ui-overlay">
+    <button id="start-btn">Open My CV</button>
+    <button id="view-cv-btn">View Full CV</button>
+    <div class="audio-controls">
+      <button class="audio-btn" id="skip-btn" title="Skip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="5 4 15 12 5 20 5 4"></polygon>
+          <line x1="19" y1="5" x2="19" y2="19"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="info-panel pos-top-left" id="info-panel">
+      <h2 id="panel-title"></h2>
+      <h3 id="panel-subtitle"></h3>
+      <p id="panel-content"></p>
+    </div>
+    <div class="nav-container" id="nav-container">
+      <button class="nav-btn active" data-section="0"></button>
+      <button class="nav-btn" data-section="1"></button>
+      <button class="nav-btn" data-section="2"></button>
+      <button class="nav-btn" data-section="3"></button>
+      <button class="nav-btn" data-section="4"></button>
+      <button class="nav-btn" data-section="5"></button>
+    </div>
+    <div class="speech-bubble pos-top-right" id="speech-bubble"><p id="speech-text"></p></div>
+  </div>
+
+  <!-- Neural Network Background Script - Runs First -->
+  <script>
+    (function() {
+      const canvas = document.getElementById('neural-bg');
+      const ctx = canvas.getContext('2d');
+      const nodes = [];
+      const connections = [];
+      let width, height, time = 0;
+
+      function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        initNodes();
+      }
+
+      function initNodes() {
+        nodes.length = 0;
+        connections.length = 0;
+        const count = Math.floor((width * height) / 15000);
+
+        for (let i = 0; i < count; i++) {
+          nodes.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.5,
+            radius: Math.random() * 2 + 1,
+            pulse: Math.random() * Math.PI * 2
+          });
+        }
+      }
+
+      function draw() {
+        time += 0.01;
+
+        // Dark gradient background
+        const grad = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, Math.max(width, height) * 0.8);
+        grad.addColorStop(0, '#0f0f1a');
+        grad.addColorStop(1, '#050508');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, width, height);
+
+        // Update and draw nodes
+        nodes.forEach((node, i) => {
+          // Move
+          node.x += node.vx;
+          node.y += node.vy;
+
+          // Bounce
+          if (node.x < 0 || node.x > width) node.vx *= -1;
+          if (node.y < 0 || node.y > height) node.vy *= -1;
+
+          // Keep in bounds
+          node.x = Math.max(0, Math.min(width, node.x));
+          node.y = Math.max(0, Math.min(height, node.y));
+
+          // Draw connections to nearby nodes
+          for (let j = i + 1; j < nodes.length; j++) {
+            const other = nodes[j];
+            const dx = other.x - node.x;
+            const dy = other.y - node.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 150) {
+              const alpha = (1 - dist / 150) * 0.3;
+              ctx.beginPath();
+              ctx.moveTo(node.x, node.y);
+              ctx.lineTo(other.x, other.y);
+              ctx.strokeStyle = `rgba(163, 230, 53, ${alpha})`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+
+          // Draw node with pulse
+          const pulse = Math.sin(time * 2 + node.pulse) * 0.5 + 0.5;
+          const glowRadius = node.radius * (2 + pulse);
+
+          // Glow
+          const nodeGrad = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, glowRadius * 3);
+          nodeGrad.addColorStop(0, `rgba(163, 230, 53, ${0.3 + pulse * 0.2})`);
+          nodeGrad.addColorStop(1, 'rgba(163, 230, 53, 0)');
+          ctx.fillStyle = nodeGrad;
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, glowRadius * 3, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Core
+          ctx.fillStyle = `rgba(163, 230, 53, ${0.6 + pulse * 0.4})`;
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        requestAnimationFrame(draw);
+      }
+
+      resize();
+      window.addEventListener('resize', resize);
+      draw();
+    })();
+  </script>
+
+  <script type="importmap">
+    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+    // CV Data
+    const cvData = {
+      personal: { name: "Linton Evans", title: "Technical Specialist", email: "linton.evans@outlook.com", phone: "+64-21-939-505", location: "Auckland, New Zealand", noticePeriod: "1-2 Weeks" },
+      shortSummary: "Technical Specialist with 17+ years bridging deep technical expertise with practical business execution.",
+      experience: [
+        { title: "Owner / Operator", company: "E & E Traders Limited", period: "2019 - Present" },
+        { title: "Product Architect - UC", company: "Spark New Zealand", period: "2014 - 2020" },
+        { title: "UC Manager", company: "Pure IP Limited", period: "2014" },
+        { title: "APAC IT Network Manager", company: "Zeacom / Enghouse", period: "2011 - 2014" }
+      ],
+      skills: { technical: ["JavaScript", "Python", "REST APIs", "Three.js"], platforms: ["Microsoft Teams", "Azure", "AWS"], marketing: ["Google Ads", "GA4", "SEO"] },
+      education: [{ degree: "Bachelor of Computing Sciences", institution: "Unitec Institute of Technology" }],
+      speeches: {
+        welcome: "G'day! I'm Linton Evans, a Technical Specialist based in Auckland. Welcome to my interactive portfolio.",
+        about: "With over 17 years of enterprise experience, I bridge deep technical expertise with practical business execution.",
+        experience: "I've held senior technical roles at major companies including Spark New Zealand as Product Architect.",
+        skills: "My technical expertise spans e-commerce, API development, cloud services, and unified communications.",
+        education: "I hold a Bachelor of Computing Sciences along with multiple industry certifications.",
+        contact: "I'm currently available with a notice period of 1 to 2 weeks. Feel free to reach out via email."
+      }
+    };
+
+    // PDF Viewer - Single Page with Turn Animation
+    class PDFBooklet {
+      constructor() {
+        this.pdfDoc = null;
+        this.currentPage = 1;
+        this.totalPages = 0;
+        this.zoomLevel = 0;
+        this.isAnimating = false;
+        this.container = document.getElementById('pdf-booklet');
+        this.bookletContainer = this.container.querySelector('.booklet-container');
+        this.pageCurrent = document.getElementById('page-current');
+        this.pageNext = document.getElementById('page-next');
+        this.canvasCurrent = document.getElementById('canvas-current');
+        this.canvasNext = document.getElementById('canvas-next');
+        this.pageIndicator = document.getElementById('page-indicator');
+
+        document.getElementById('prev-page').addEventListener('click', () => this.prevPage());
+        document.getElementById('next-page').addEventListener('click', () => this.nextPage());
+        document.getElementById('close-booklet').addEventListener('click', () => this.hide());
+        document.getElementById('view-cv-btn').addEventListener('click', () => this.show());
+        document.getElementById('zoom-btn').addEventListener('click', () => this.toggleZoom());
+        this.pageCurrent.addEventListener('click', () => this.toggleZoom());
+      }
+
+      toggleZoom() {
+        this.zoomLevel = (this.zoomLevel + 1) % 3;
+        this.bookletContainer.classList.remove('zoomed', 'zoomed-max');
+        if (this.zoomLevel === 1) this.bookletContainer.classList.add('zoomed');
+        else if (this.zoomLevel === 2) this.bookletContainer.classList.add('zoomed-max');
+      }
+
+      async loadPDF(url) {
+        try {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          this.pdfDoc = await pdfjsLib.getDocument(url).promise;
+          this.totalPages = this.pdfDoc.numPages;
+          await this.renderPage(1, this.canvasCurrent);
+          this.updateIndicator();
+          return true;
+        } catch (e) { return false; }
+      }
+
+      async renderPage(pageNum, canvas) {
+        if (pageNum < 1 || pageNum > this.totalPages) {
+          const ctx = canvas.getContext('2d');
+          canvas.width = 430; canvas.height = 580;
+          ctx.fillStyle = '#f5f5f5';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          return;
+        }
+        const page = await this.pdfDoc.getPage(pageNum);
+        const vp = page.getViewport({ scale: 1 });
+        const scale = Math.min(430 / vp.width, 580 / vp.height) * 2;
+        const scaledVp = page.getViewport({ scale });
+        canvas.width = scaledVp.width;
+        canvas.height = scaledVp.height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport: scaledVp }).promise;
+      }
+
+      updateIndicator() {
+        this.pageIndicator.textContent = `${this.currentPage} / ${this.totalPages}`;
+        document.getElementById('prev-page').disabled = this.currentPage <= 1;
+        document.getElementById('next-page').disabled = this.currentPage >= this.totalPages;
+      }
+
+      // Animate page turn to a specific page
+      async turnToPage(targetPage, animate = true) {
+        if (targetPage < 1 || targetPage > this.totalPages || targetPage === this.currentPage) return;
+        if (this.isAnimating) return;
+
+        const goingForward = targetPage > this.currentPage;
+        this.isAnimating = true;
+
+        // Pre-render the target page on the next canvas
+        await this.renderPage(targetPage, this.canvasNext);
+
+        if (animate) {
+          // Apply animation classes
+          if (goingForward) {
+            this.pageCurrent.classList.add('turning-out');
+            this.pageNext.classList.add('turning-in');
+          } else {
+            this.pageCurrent.classList.add('turning-back-out');
+            this.pageNext.classList.add('turning-back-in');
+          }
+
+          // Wait for animation to complete (0.9s animation)
+          await new Promise(resolve => setTimeout(resolve, 900));
+
+          // Remove animation classes
+          this.pageCurrent.classList.remove('turning-out', 'turning-back-out');
+          this.pageNext.classList.remove('turning-in', 'turning-back-in');
+        }
+
+        // Swap canvases - copy next to current
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.canvasNext.width;
+        tempCanvas.height = this.canvasNext.height;
+        tempCanvas.getContext('2d').drawImage(this.canvasNext, 0, 0);
+        this.canvasCurrent.width = tempCanvas.width;
+        this.canvasCurrent.height = tempCanvas.height;
+        this.canvasCurrent.getContext('2d').drawImage(tempCanvas, 0, 0);
+
+        // Reset next page
+        this.pageNext.classList.remove('current');
+        this.pageNext.classList.add('next');
+        this.pageCurrent.classList.add('current');
+        this.pageCurrent.classList.remove('next');
+
+        this.currentPage = targetPage;
+        this.updateIndicator();
+        this.isAnimating = false;
+      }
+
+      async prevPage() {
+        if (this.currentPage > 1) {
+          await this.turnToPage(this.currentPage - 1);
+        }
+      }
+
+      async nextPage() {
+        if (this.currentPage < this.totalPages) {
+          await this.turnToPage(this.currentPage + 1);
+        }
+      }
+
+      show() {
+        this.container.style.display = 'block';
+        // Trigger reflow then add visible class for animation
+        this.container.offsetHeight;
+        requestAnimationFrame(() => {
+          this.container.classList.add('visible');
+        });
+      }
+
+      hide() {
+        this.container.classList.remove('visible');
+        setTimeout(() => {
+          if (!this.container.classList.contains('visible')) {
+            this.container.style.display = 'none';
+          }
+        }, 800);
+      }
+
+      // Get current page number
+      getCurrentPage() {
+        return this.currentPage;
+      }
+
+      // Get total pages
+      getTotalPages() {
+        return this.totalPages;
+      }
+    }
+
+    // Main App
+    class App {
+      constructor() {
+        this.container = document.getElementById('canvas-container');
+        this.loadingScreen = document.getElementById('loading-screen');
+        this.progressBar = document.getElementById('progress-bar');
+        this.startBtn = document.getElementById('start-btn');
+        this.infoPanel = document.getElementById('info-panel');
+        this.speechBubble = document.getElementById('speech-bubble');
+        this.navContainer = document.getElementById('nav-container');
+        this.viewCvBtn = document.getElementById('view-cv-btn');
+        this.currentSection = 0;
+        this.isPlaying = false;
+        this.papers = [];
+        this.penGroup = null;
+        this.inkLine = null;
+
+        this.pdfBooklet = new PDFBooklet();
+        this.init();
+      }
+
+      async init() {
+        this.setupRenderer();
+        this.setupScene();
+        this.setupCamera();
+        this.createLighting();
+        this.createBox();
+        this.createPapersAndPen();
+        this.setupPostProcessing();
+        this.setupEvents();
+        await this.pdfBooklet.loadPDF('/Users/linton/Documents/Linton_EvansComplete_CV-Dec25.pdf') || await this.pdfBooklet.loadPDF('./cv.pdf');
+        await this.simulateLoading();
+        this.animate();
+      }
+
+      setupRenderer() {
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, premultipliedAlpha: false });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.setClearColor(0x000000, 0);
+        this.container.appendChild(this.renderer.domElement);
+      }
+
+      setupScene() {
+        this.scene = new THREE.Scene();
+        this.scene.background = null;
+      }
+
+      setupCamera() {
+        this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera.position.set(0, 1.5, 4);
+        this.camera.lookAt(0, 0.8, 0);
+      }
+
+      setupPostProcessing() {
+        // Skip post-processing to keep background transparency
+        // The neural network background provides enough visual interest
+        this.useComposer = false;
+      }
+
+      createLighting() {
+        this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const key = new THREE.DirectionalLight(0xffffff, 1);
+        key.position.set(3, 5, 5);
+        this.scene.add(key);
+        const fill = new THREE.DirectionalLight(0x88aaff, 0.4);
+        fill.position.set(-3, 3, 2);
+        this.scene.add(fill);
+        const rim = new THREE.DirectionalLight(0xa3e635, 0.3);
+        rim.position.set(0, 2, -4);
+        this.scene.add(rim);
+      }
+
+      createBox() {
+        this.boxGroup = new THREE.Group();
+        const mat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, metalness: 0.3, roughness: 0.4 });
+        const size = 1.5;
+
+        this.boxParts = {};
+        this.boxParts.bottom = new THREE.Mesh(new THREE.BoxGeometry(size, 0.06, size), mat);
+        this.boxParts.bottom.position.y = -size/2;
+        this.boxGroup.add(this.boxParts.bottom);
+
+        const panel = new THREE.BoxGeometry(size, size, 0.06);
+        const side = new THREE.BoxGeometry(0.06, size, size);
+
+        this.boxParts.front = new THREE.Mesh(panel, mat);
+        this.boxParts.front.position.set(0, 0, size/2);
+        this.boxGroup.add(this.boxParts.front);
+
+        this.boxParts.back = new THREE.Mesh(panel, mat);
+        this.boxParts.back.position.set(0, 0, -size/2);
+        this.boxGroup.add(this.boxParts.back);
+
+        this.boxParts.left = new THREE.Mesh(side, mat);
+        this.boxParts.left.position.set(-size/2, 0, 0);
+        this.boxGroup.add(this.boxParts.left);
+
+        this.boxParts.right = new THREE.Mesh(side, mat);
+        this.boxParts.right.position.set(size/2, 0, 0);
+        this.boxGroup.add(this.boxParts.right);
+
+        this.boxParts.lid = new THREE.Mesh(new THREE.BoxGeometry(size+0.08, 0.06, size+0.08), mat);
+        this.boxParts.lid.position.y = size/2;
+        this.boxGroup.add(this.boxParts.lid);
+
+        this.boxParts.glow = new THREE.PointLight(0xa3e635, 0, 5);
+        this.boxGroup.add(this.boxParts.glow);
+
+        this.boxGroup.rotation.y = 0.3;
+        this.scene.add(this.boxGroup);
+        this.boxUnpacked = false;
+      }
+
+      createPapersAndPen() {
+        // Helper function to create paper canvas with optional pre-written content
+        const createPaperCanvas = (contentType = 'blank') => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 512;
+          canvas.height = 680;
+          const ctx = canvas.getContext('2d');
+
+          // Paper background
+          ctx.fillStyle = '#faf8f5';
+          ctx.fillRect(0, 0, 512, 680);
+
+          // Add subtle paper texture lines
+          ctx.strokeStyle = 'rgba(200, 195, 185, 0.3)';
+          ctx.lineWidth = 0.5;
+          for (let y = 30; y < 680; y += 25) {
+            ctx.beginPath();
+            ctx.moveTo(30, y);
+            ctx.lineTo(482, y);
+            ctx.stroke();
+          }
+
+          // Add pre-written content based on type
+          if (contentType !== 'blank' && contentType !== 'active') {
+            ctx.font = 'italic 16px Georgia, serif';
+            ctx.fillStyle = 'rgba(25, 25, 50, 0.7)';
+
+            const contentSets = {
+              notes1: [
+                'Technical Architecture Notes',
+                '',
+                '• API Design Patterns',
+                '• Microservices architecture',
+                '• Cloud infrastructure (AWS/Azure)',
+                '• Performance optimization',
+                '',
+                'Key Projects:',
+                '- E-commerce platform redesign',
+                '- Real-time data processing',
+                '- Legacy system migration',
+                '',
+                'Stakeholder Management',
+                '• Cross-functional teams',
+                '• Executive presentations'
+              ],
+              notes2: [
+                'Professional Development',
+                '',
+                'Certifications:',
+                '• AWS Solutions Architect',
+                '• Microsoft Azure',
+                '• ITIL Foundation',
+                '',
+                'Skills Assessment:',
+                '- Leadership: Strong',
+                '- Technical: Expert',
+                '- Communication: Excellent',
+                '',
+                'Goals for 2025:',
+                '• Expand cloud expertise',
+                '• Mentor junior developers'
+              ],
+              notes3: [
+                'Meeting Notes - Q4 Review',
+                '',
+                'Discussion Points:',
+                '• Product roadmap alignment',
+                '• Resource allocation',
+                '• Timeline adjustments',
+                '',
+                'Action Items:',
+                '1. Review architecture docs',
+                '2. Schedule team sync',
+                '3. Update stakeholders',
+                '',
+                'Follow-up required:',
+                '- Budget review next week'
+              ],
+              notes4: [
+                'Ideas & Innovation',
+                '',
+                'New initiatives:',
+                '• AI/ML integration',
+                '• Process automation',
+                '• Developer experience',
+                '',
+                'Research topics:',
+                '- Emerging technologies',
+                '- Industry best practices',
+                '- Competitive analysis',
+                '',
+                'Brainstorm session notes',
+                'scheduled for Friday'
+              ]
+            };
+
+            const lines = contentSets[contentType] || contentSets.notes1;
+            let y = 60;
+            lines.forEach((line, idx) => {
+              if (idx === 0) {
+                ctx.font = 'bold italic 18px Georgia, serif';
+                ctx.fillStyle = 'rgba(25, 25, 50, 0.8)';
+              } else {
+                ctx.font = 'italic 15px Georgia, serif';
+                ctx.fillStyle = 'rgba(25, 25, 50, 0.65)';
+              }
+              ctx.fillText(line, 45, y);
+              y += line === '' ? 15 : 28;
+            });
+
+            // Add some decorative squiggles/underlines for realism
+            ctx.strokeStyle = 'rgba(25, 25, 50, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(45, 75);
+            ctx.lineTo(280, 75);
+            ctx.stroke();
+          }
+
+          return canvas;
+        };
+
+        // Create main paper (center) with canvas texture for active handwriting
+        this.inkCanvas = createPaperCanvas('active');
+        this.inkCtx = this.inkCanvas.getContext('2d');
+
+        this.paperTexture = new THREE.CanvasTexture(this.inkCanvas);
+        this.paperTexture.needsUpdate = true;
+
+        const paperMat = new THREE.MeshStandardMaterial({
+          map: this.paperTexture,
+          roughness: 0.9,
+          side: THREE.DoubleSide,
+          metalness: 0
+        });
+
+        // Content types for each paper (index 2 is the active one)
+        const paperContents = ['notes1', 'notes2', 'active', 'notes3', 'notes4'];
+
+        // Create 5 paper sheets
+        for (let i = 0; i < 5; i++) {
+          let mat;
+          if (i === 2) {
+            // Center paper - active writing surface
+            mat = paperMat;
+          } else {
+            // Background papers with pre-written content
+            const bgCanvas = createPaperCanvas(paperContents[i]);
+            const bgTexture = new THREE.CanvasTexture(bgCanvas);
+            mat = new THREE.MeshStandardMaterial({
+              map: bgTexture,
+              roughness: 0.9,
+              side: THREE.DoubleSide,
+              metalness: 0
+            });
+          }
+
+          const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.2), mat);
+          paper.visible = false;
+          paper.userData = {
+            targetX: (i - 2) * 0.3,
+            targetY: 1.2 + i * 0.02,
+            targetZ: 1.5 + i * 0.1,
+            targetRotX: -0.3,
+            targetRotY: (i - 2) * 0.1,
+            delay: i * 0.1
+          };
+          this.papers.push(paper);
+          this.scene.add(paper);
+        }
+
+        // Create realistic fountain pen using sprite for cleaner look
+        this.penGroup = new THREE.Group();
+        this.penGroup.visible = false;
+
+        // Create pen using 2D canvas for crisp rendering
+        const penCanvas = document.createElement('canvas');
+        penCanvas.width = 64;
+        penCanvas.height = 256;
+        const pctx = penCanvas.getContext('2d');
+
+        // Draw pen body - elegant black with gold accents
+        const gradient = pctx.createLinearGradient(20, 0, 44, 0);
+        gradient.addColorStop(0, '#0a0a15');
+        gradient.addColorStop(0.3, '#1a1a25');
+        gradient.addColorStop(0.7, '#1a1a25');
+        gradient.addColorStop(1, '#0a0a15');
+
+        // Barrel
+        pctx.fillStyle = gradient;
+        pctx.beginPath();
+        pctx.roundRect(22, 20, 20, 140, 3);
+        pctx.fill();
+
+        // Gold cap band
+        pctx.fillStyle = '#c9a227';
+        pctx.fillRect(20, 25, 24, 8);
+        pctx.fillRect(20, 45, 24, 4);
+
+        // Gold clip
+        pctx.fillStyle = '#c9a227';
+        pctx.fillRect(44, 30, 4, 50);
+        pctx.beginPath();
+        pctx.arc(46, 80, 4, 0, Math.PI * 2);
+        pctx.fill();
+
+        // Grip section (darker)
+        pctx.fillStyle = '#15152a';
+        pctx.beginPath();
+        pctx.moveTo(26, 160);
+        pctx.lineTo(38, 160);
+        pctx.lineTo(36, 195);
+        pctx.lineTo(28, 195);
+        pctx.closePath();
+        pctx.fill();
+
+        // Gold nib
+        pctx.fillStyle = '#d4af37';
+        pctx.beginPath();
+        pctx.moveTo(32, 195);
+        pctx.lineTo(26, 230);
+        pctx.quadraticCurveTo(32, 256, 32, 256);
+        pctx.quadraticCurveTo(32, 256, 38, 230);
+        pctx.lineTo(32, 195);
+        pctx.fill();
+
+        // Nib slit
+        pctx.strokeStyle = '#000';
+        pctx.lineWidth = 1;
+        pctx.beginPath();
+        pctx.moveTo(32, 210);
+        pctx.lineTo(32, 252);
+        pctx.stroke();
+
+        // Breather hole
+        pctx.fillStyle = '#000';
+        pctx.beginPath();
+        pctx.arc(32, 215, 2, 0, Math.PI * 2);
+        pctx.fill();
+
+        const penTexture = new THREE.CanvasTexture(penCanvas);
+        const penMaterial = new THREE.SpriteMaterial({
+          map: penTexture,
+          transparent: true
+        });
+        this.penSprite = new THREE.Sprite(penMaterial);
+        this.penSprite.scale.set(0.15, 0.6, 1);
+        this.penGroup.add(this.penSprite);
+
+        this.scene.add(this.penGroup);
+
+        // Initialize ink drawing state
+        this.inkPoints = [];
+        this.lastInkPoint = null;
+      }
+
+      setupEvents() {
+        this.startBtn.addEventListener('click', () => this.startExperience());
+        document.getElementById('skip-btn').addEventListener('click', () => this.skipToNext());
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+          btn.addEventListener('click', e => this.goToSection(parseInt(e.target.dataset.section)));
+        });
+        window.addEventListener('resize', () => this.onResize());
+        window.addEventListener('keydown', e => {
+          if (e.key === 'ArrowRight' || e.key === ' ') this.skipToNext();
+          if (e.key === 'ArrowLeft') this.goToSection(Math.max(0, this.currentSection - 1));
+        });
+      }
+
+      async simulateLoading() {
+        for (let i = 0; i <= 100; i += 20) {
+          this.progressBar.style.width = `${i}%`;
+          await new Promise(r => setTimeout(r, 150));
+        }
+        await new Promise(r => setTimeout(r, 300));
+        this.loadingScreen.classList.add('hidden');
+        this.startBtn.classList.add('visible');
+      }
+
+      async startExperience() {
+        this.startBtn.style.display = 'none';
+        this.isPlaying = true;
+        await this.unpackBoxWithPapers();
+        this.navContainer.style.display = 'flex';
+        this.viewCvBtn.classList.add('visible');
+        this.playSection(0);
+      }
+
+      async unpackBoxWithPapers() {
+        return new Promise(resolve => {
+          const duration = 6000;
+          const start = performance.now();
+          let papersFlying = false;
+          let penWriting = false;
+          let penWriteStart = 0;
+
+          // Create realistic handwriting path on canvas
+          // "Linton Evans" signature with proper letter forms
+          const signaturePath = this.generateSignaturePath();
+          let currentPathIndex = 0;
+
+          const animate = (now) => {
+            const elapsed = now - start;
+            const t = Math.min(elapsed / duration, 1);
+
+            // Phase 1: Open lid (0 - 0.15)
+            if (t < 0.15) {
+              const lt = t / 0.15;
+              this.boxParts.glow.intensity = Math.sin(lt * Math.PI) * 3;
+              this.boxParts.lid.position.y = 0.75 + lt * 1.2;
+              this.boxParts.lid.rotation.x = -lt * Math.PI / 2.5;
+            }
+
+            // Phase 2: Papers fly out (0.12 - 0.4)
+            if (t > 0.12 && !papersFlying) {
+              papersFlying = true;
+              this.papers.forEach(p => {
+                p.visible = true;
+                p.position.set(0, 0, 0);
+                p.rotation.set(0, 0, 0);
+                p.scale.set(0.1, 0.1, 0.1);
+              });
+            }
+
+            if (papersFlying && t < 0.4) {
+              const pt = (t - 0.12) / 0.28;
+              this.papers.forEach((paper, i) => {
+                const d = paper.userData;
+                const localT = Math.max(0, Math.min(1, (pt - d.delay) / (1 - d.delay)));
+                const ease = 1 - Math.pow(1 - localT, 3);
+
+                paper.position.x = d.targetX * ease;
+                paper.position.y = d.targetY * ease + Math.sin(localT * Math.PI) * 0.5;
+                paper.position.z = d.targetZ * ease;
+                paper.rotation.x = d.targetRotX * ease + (1 - ease) * Math.PI * 2;
+                paper.rotation.y = d.targetRotY * ease;
+                paper.rotation.z = (1 - ease) * Math.PI;
+                paper.scale.setScalar(0.1 + ease * 0.9);
+              });
+            }
+
+            // Phase 3: Box sides fall (0.15 - 0.35)
+            if (t > 0.15 && t < 0.35) {
+              const st = (t - 0.15) / 0.2;
+              this.boxParts.front.position.y = -st * 2;
+              this.boxParts.front.rotation.x = -st * Math.PI / 2;
+              this.boxParts.back.position.y = -st * 2;
+              this.boxParts.back.rotation.x = st * Math.PI / 2;
+              this.boxParts.left.position.y = -st * 2;
+              this.boxParts.left.rotation.z = st * Math.PI / 2;
+              this.boxParts.right.position.y = -st * 2;
+              this.boxParts.right.rotation.z = -st * Math.PI / 2;
+            }
+
+            // Phase 4: Pen appears and writes (0.30 - 0.75)
+            if (t > 0.30 && !penWriting) {
+              penWriting = true;
+              penWriteStart = now;
+              this.penGroup.visible = true;
+              // Start pen off to the side, ready to swoop in
+              this.penGroup.position.set(1.2, 2.2, 2.8);
+            }
+
+            if (penWriting && t < 0.78) {
+              const penElapsed = now - penWriteStart;
+              const penDuration = duration * 0.45; // 45% of animation for writing
+              const penT = Math.min(penElapsed / penDuration, 1);
+
+              // Smooth easing for pen progress
+              const easedPenT = penT < 0.5
+                ? 2 * penT * penT
+                : 1 - Math.pow(-2 * penT + 2, 2) / 2;
+
+              // Draw ink on canvas - continue drawing until signature is complete
+              if (currentPathIndex < signaturePath.length) {
+                const targetIndex = Math.floor(easedPenT * signaturePath.length);
+                while (currentPathIndex < targetIndex && currentPathIndex < signaturePath.length) {
+                  const point = signaturePath[currentPathIndex];
+                  this.drawInkPoint(point);
+                  currentPathIndex++;
+                }
+                this.paperTexture.needsUpdate = true;
+              }
+
+              // Calculate current pen target position - ALWAYS in front of all papers
+              let targetPenX, targetPenY, targetPenZ;
+              let penRotation = -0.5;
+
+              // Center paper is at index 2, positioned at Z = 1.7
+              // Pen must be in front of all papers (highest Z = paper index 4 at Z ~1.9)
+              const penBaseZ = 2.1; // Well in front of all papers
+
+              if (currentPathIndex < signaturePath.length && penT < 0.92) {
+                // Smooth interpolation between points for fluid movement
+                const exactIndex = easedPenT * signaturePath.length;
+                const idx1 = Math.floor(exactIndex);
+                const idx2 = Math.min(idx1 + 1, signaturePath.length - 1);
+                const blend = exactIndex - idx1;
+
+                const point1 = signaturePath[idx1];
+                const point2 = signaturePath[idx2];
+
+                // Interpolate between points
+                const interpX = point1.x + (point2.x - point1.x) * blend;
+                const interpY = point1.y + (point2.y - point1.y) * blend;
+
+                // Convert canvas coords to 3D space (paper centered at 0)
+                targetPenX = (interpX / 512 - 0.5) * 0.9;
+                targetPenY = (1 - interpY / 680 - 0.5) * 1.2 + 1.22 + 0.12;
+                targetPenZ = penBaseZ;
+
+                // Natural pen tilt based on writing direction
+                if (idx2 > idx1) {
+                  const dx = point2.x - point1.x;
+                  const dy = point2.y - point1.y;
+                  penRotation = -0.5 + Math.atan2(dy, dx) * 0.12;
+                }
+
+                // Add subtle hand tremor for realism
+                const tremor = Math.sin(penT * 80) * 0.002;
+                targetPenX += tremor;
+                targetPenY += Math.cos(penT * 60) * 0.0015;
+
+                // Check if current point is a lift (pen up)
+                const currentPoint = signaturePath[idx1];
+                if (currentPoint && currentPoint.lift) {
+                  targetPenY += 0.12; // Lift pen slightly
+                  targetPenZ += 0.05;
+                }
+              } else {
+                // Pen lifts away gracefully at the end
+                const liftT = Math.min((penT - 0.92) / 0.08, 1);
+                const liftEase = liftT * liftT;
+
+                // Get last signature point as starting position
+                const lastPoint = signaturePath[signaturePath.length - 1];
+                const lastX = (lastPoint.x / 512 - 0.5) * 0.9;
+                const lastY = (1 - lastPoint.y / 680 - 0.5) * 1.2 + 1.22 + 0.12;
+
+                targetPenX = lastX + liftEase * 1.0;
+                targetPenY = lastY + liftEase * 0.8;
+                targetPenZ = penBaseZ + liftEase * 0.6;
+                penRotation = -0.5 + liftEase * 0.4;
+              }
+
+              // Smooth pen position (lerp from current to target)
+              const lerpSpeed = 0.18;
+              this.penGroup.position.x += (targetPenX - this.penGroup.position.x) * lerpSpeed;
+              this.penGroup.position.y += (targetPenY - this.penGroup.position.y) * lerpSpeed;
+              this.penGroup.position.z += (targetPenZ - this.penGroup.position.z) * lerpSpeed;
+
+              // Smooth rotation
+              const currentRotation = this.penSprite.material.rotation;
+              this.penSprite.material.rotation += (penRotation - currentRotation) * 0.12;
+            }
+
+            // Phase 5: Pen fades and papers stack together (0.78 - 0.92)
+            if (t > 0.78 && t < 0.92) {
+              const stackT = (t - 0.78) / 0.14;
+              const stackEase = 1 - Math.pow(1 - stackT, 3); // ease out cubic
+
+              // Fade out pen
+              if (this.penSprite && this.penSprite.material) {
+                this.penSprite.material.opacity = 1 - stackT;
+              }
+
+              // Animate all papers to stack together at center
+              this.papers.forEach((paper, i) => {
+                const d = paper.userData;
+                // Target: all papers stack at center, slightly offset in Z for depth
+                const stackX = 0;
+                const stackY = 1.35;
+                const stackZ = 1.7 + i * 0.008; // Tiny offset for stacking effect
+                const stackRotX = -0.25;
+                const stackRotY = 0;
+                const stackRotZ = 0;
+
+                // Interpolate from spread position to stack position
+                paper.position.x = d.targetX * (1 - stackEase) + stackX * stackEase;
+                paper.position.y = d.targetY * (1 - stackEase) + stackY * stackEase;
+                paper.position.z = d.targetZ * (1 - stackEase) + stackZ * stackEase;
+                paper.rotation.x = d.targetRotX * (1 - stackEase) + stackRotX * stackEase;
+                paper.rotation.y = d.targetRotY * (1 - stackEase) + stackRotY * stackEase;
+                paper.rotation.z = 0;
+              });
+            }
+
+            // Phase 6: Final fade out (0.92 - 1.0)
+            if (t > 0.92) {
+              const ft = (t - 0.92) / 0.08;
+              const fadeEase = ft * ft;
+
+              this.papers.forEach(p => {
+                p.material.transparent = true;
+                p.material.opacity = 1 - fadeEase;
+              });
+
+              // Ensure pen is faded
+              if (this.penSprite && this.penSprite.material) {
+                this.penSprite.material.opacity = 0;
+              }
+            }
+
+            if (t < 1) {
+              requestAnimationFrame(animate);
+            } else {
+              this.boxGroup.visible = false;
+              this.papers.forEach(p => p.visible = false);
+              this.penGroup.visible = false;
+              this.boxUnpacked = true;
+
+              setTimeout(() => this.pdfBooklet.show(), 300);
+              resolve();
+            }
+          };
+
+          requestAnimationFrame(animate);
+        });
+      }
+
+      // Generate multiple lines of handwritten text
+      generateSignaturePath() {
+        const path = [];
+
+        // Helper to add bezier curve points
+        const addCurve = (x1, y1, cx1, cy1, cx2, cy2, x2, y2, pressure = 1) => {
+          for (let t = 0; t <= 1; t += 0.03) {
+            const mt = 1 - t;
+            const x = mt*mt*mt*x1 + 3*mt*mt*t*cx1 + 3*mt*t*t*cx2 + t*t*t*x2;
+            const y = mt*mt*mt*y1 + 3*mt*mt*t*cy1 + 3*mt*t*t*cy2 + t*t*t*y2;
+            path.push({ x, y, pressure: pressure * (0.8 + Math.sin(t * Math.PI) * 0.2), lift: false });
+          }
+        };
+
+        // Helper to write cursive text at position
+        const writeWord = (word, startX, startY, scale = 1) => {
+          let x = startX;
+          const letterSpacing = 12 * scale;
+
+          for (const char of word.toLowerCase()) {
+            const s = scale;
+            switch(char) {
+              case 'l':
+                addCurve(x, startY, x, startY - 35*s, x + 3*s, startY - 45*s, x + 6*s, startY - 38*s, 1);
+                addCurve(x + 6*s, startY - 38*s, x + 10*s, startY - 30*s, x + 6*s, startY, x + 20*s, startY + 5*s, 0.9);
+                x += 18 * s;
+                break;
+              case 'i':
+                path.push({ x: x + 2*s, y: startY, pressure: 0, lift: true });
+                addCurve(x + 2*s, startY, x + 4*s, startY - 15*s, x + 8*s, startY - 18*s, x + 10*s, startY + 3*s, 0.8);
+                x += 12 * s;
+                break;
+              case 'n':
+                addCurve(x, startY + 3*s, x + 3*s, startY - 18*s, x + 12*s, startY - 18*s, x + 14*s, startY + 3*s, 0.85);
+                addCurve(x + 14*s, startY + 3*s, x + 17*s, startY - 18*s, x + 26*s, startY - 18*s, x + 28*s, startY + 3*s, 0.85);
+                x += 30 * s;
+                break;
+              case 't':
+                addCurve(x, startY + 3*s, x + 3*s, startY - 25*s, x + 7*s, startY - 30*s, x + 10*s, startY + 3*s, 0.8);
+                path.push({ x: x + 2*s, y: startY - 15*s, pressure: 0, lift: true });
+                path.push({ x: x + 2*s, y: startY - 15*s, pressure: 0.6, lift: false });
+                path.push({ x: x + 14*s, y: startY - 15*s, pressure: 0.6, lift: false });
+                x += 14 * s;
+                break;
+              case 'o':
+                path.push({ x: x + 2*s, y: startY, pressure: 0, lift: true });
+                addCurve(x + 2*s, startY, x, startY - 15*s, x + 12*s, startY - 18*s, x + 15*s, startY, 0.75);
+                addCurve(x + 15*s, startY, x + 18*s, startY + 8*s, x + 5*s, startY + 8*s, x + 2*s, startY, 0.75);
+                x += 18 * s;
+                break;
+              case 'e':
+                path.push({ x: x + 2*s, y: startY - 8*s, pressure: 0, lift: true });
+                addCurve(x + 2*s, startY - 8*s, x + 15*s, startY - 10*s, x + 15*s, startY - 18*s, x + 8*s, startY - 18*s, 0.8);
+                addCurve(x + 8*s, startY - 18*s, x, startY - 16*s, x, startY + 5*s, x + 12*s, startY + 8*s, 0.8);
+                x += 16 * s;
+                break;
+              case 'v':
+                path.push({ x: x + 2*s, y: startY - 3*s, pressure: 0, lift: true });
+                addCurve(x + 2*s, startY - 3*s, x + 5*s, startY - 18*s, x + 10*s, startY + 10*s, x + 14*s, startY + 3*s, 0.8);
+                addCurve(x + 14*s, startY + 3*s, x + 18*s, startY - 8*s, x + 25*s, startY - 18*s, x + 28*s, startY, 0.8);
+                x += 28 * s;
+                break;
+              case 'a':
+                addCurve(x, startY, x - 3*s, startY - 15*s, x + 10*s, startY - 18*s, x + 14*s, startY, 0.75);
+                addCurve(x + 14*s, startY, x + 17*s, startY + 7*s, x + 3*s, startY + 7*s, x, startY, 0.75);
+                addCurve(x + 14*s, startY, x + 16*s, startY - 8*s, x + 20*s, startY - 3*s, x + 22*s, startY + 3*s, 0.75);
+                x += 24 * s;
+                break;
+              case 's':
+                addCurve(x, startY + 3*s, x + 3*s, startY - 10*s, x + 12*s, startY - 15*s, x + 15*s, startY - 8*s, 0.8);
+                addCurve(x + 15*s, startY - 8*s, x + 18*s, startY, x + 8*s, startY + 10*s, x + 18*s, startY + 12*s, 0.85);
+                x += 20 * s;
+                break;
+              case 'c':
+                path.push({ x: x + 12*s, y: startY - 12*s, pressure: 0, lift: true });
+                addCurve(x + 12*s, startY - 12*s, x + 5*s, startY - 18*s, x, startY - 5*s, x + 5*s, startY + 5*s, 0.8);
+                addCurve(x + 5*s, startY + 5*s, x + 10*s, startY + 10*s, x + 15*s, startY + 3*s, x + 18*s, startY, 0.8);
+                x += 18 * s;
+                break;
+              case 'u':
+                path.push({ x: x, y: startY - 3*s, pressure: 0, lift: true });
+                addCurve(x, startY - 3*s, x + 2*s, startY + 10*s, x + 12*s, startY + 10*s, x + 14*s, startY - 3*s, 0.8);
+                addCurve(x + 14*s, startY - 3*s, x + 16*s, startY + 10*s, x + 20*s, startY + 5*s, x + 22*s, startY + 3*s, 0.8);
+                x += 24 * s;
+                break;
+              case 'r':
+                addCurve(x, startY + 3*s, x + 2*s, startY - 15*s, x + 8*s, startY - 18*s, x + 12*s, startY - 10*s, 0.8);
+                x += 14 * s;
+                break;
+              case 'm':
+                addCurve(x, startY + 3*s, x + 3*s, startY - 18*s, x + 12*s, startY - 18*s, x + 14*s, startY + 3*s, 0.85);
+                addCurve(x + 14*s, startY + 3*s, x + 17*s, startY - 18*s, x + 26*s, startY - 18*s, x + 28*s, startY + 3*s, 0.85);
+                addCurve(x + 28*s, startY + 3*s, x + 31*s, startY - 18*s, x + 40*s, startY - 18*s, x + 42*s, startY + 3*s, 0.85);
+                x += 44 * s;
+                break;
+              case 'p':
+                addCurve(x, startY - 3*s, x + 2*s, startY + 25*s, x + 4*s, startY + 30*s, x + 6*s, startY + 25*s, 0.8);
+                path.push({ x: x + 4*s, y: startY - 3*s, pressure: 0, lift: true });
+                addCurve(x + 4*s, startY - 3*s, x + 3*s, startY - 15*s, x + 15*s, startY - 18*s, x + 18*s, startY - 5*s, 0.8);
+                addCurve(x + 18*s, startY - 5*s, x + 20*s, startY + 5*s, x + 8*s, startY + 5*s, x + 4*s, startY - 3*s, 0.8);
+                x += 22 * s;
+                break;
+              case 'd':
+                addCurve(x, startY, x - 3*s, startY - 15*s, x + 8*s, startY - 18*s, x + 12*s, startY, 0.75);
+                addCurve(x + 12*s, startY, x + 15*s, startY + 7*s, x + 3*s, startY + 7*s, x, startY, 0.75);
+                path.push({ x: x + 12*s, y: startY, pressure: 0, lift: true });
+                addCurve(x + 12*s, startY, x + 14*s, startY - 35*s, x + 16*s, startY - 40*s, x + 18*s, startY + 5*s, 0.8);
+                x += 22 * s;
+                break;
+              case 'y':
+                path.push({ x: x, y: startY - 3*s, pressure: 0, lift: true });
+                addCurve(x, startY - 3*s, x + 5*s, startY - 15*s, x + 10*s, startY + 8*s, x + 14*s, startY + 3*s, 0.8);
+                addCurve(x + 14*s, startY + 3*s, x + 18*s, startY - 10*s, x + 8*s, startY + 25*s, x + 5*s, startY + 30*s, 0.8);
+                x += 18 * s;
+                break;
+              case 'h':
+                addCurve(x, startY + 5*s, x + 2*s, startY - 35*s, x + 5*s, startY - 40*s, x + 8*s, startY - 35*s, 1);
+                addCurve(x + 8*s, startY - 35*s, x + 10*s, startY - 25*s, x + 6*s, startY, x + 8*s, startY + 3*s, 0.9);
+                addCurve(x + 8*s, startY + 3*s, x + 12*s, startY - 15*s, x + 20*s, startY - 15*s, x + 22*s, startY + 5*s, 0.85);
+                x += 24 * s;
+                break;
+              case 'w':
+                path.push({ x: x, y: startY - 3*s, pressure: 0, lift: true });
+                addCurve(x, startY - 3*s, x + 5*s, startY + 10*s, x + 10*s, startY - 15*s, x + 15*s, startY + 5*s, 0.8);
+                addCurve(x + 15*s, startY + 5*s, x + 20*s, startY - 15*s, x + 25*s, startY + 10*s, x + 30*s, startY - 3*s, 0.8);
+                x += 32 * s;
+                break;
+              case 'k':
+                addCurve(x, startY + 5*s, x + 2*s, startY - 35*s, x + 5*s, startY - 40*s, x + 8*s, startY - 35*s, 1);
+                addCurve(x + 8*s, startY - 35*s, x + 10*s, startY - 25*s, x + 6*s, startY + 5*s, x + 8*s, startY + 5*s, 0.9);
+                path.push({ x: x + 18*s, y: startY - 15*s, pressure: 0, lift: true });
+                addCurve(x + 18*s, startY - 15*s, x + 12*s, startY - 8*s, x + 6*s, startY - 3*s, x + 8*s, startY - 3*s, 0.75);
+                addCurve(x + 8*s, startY - 3*s, x + 12*s, startY + 3*s, x + 18*s, startY + 8*s, x + 22*s, startY + 5*s, 0.8);
+                x += 24 * s;
+                break;
+              case 'x':
+                path.push({ x: x, y: startY - 12*s, pressure: 0, lift: true });
+                addCurve(x, startY - 12*s, x + 8*s, startY, x + 12*s, startY + 8*s, x + 18*s, startY + 5*s, 0.8);
+                path.push({ x: x + 18*s, y: startY - 12*s, pressure: 0, lift: true });
+                addCurve(x + 18*s, startY - 12*s, x + 10*s, startY, x + 5*s, startY + 8*s, x, startY + 5*s, 0.8);
+                x += 20 * s;
+                break;
+              case ' ':
+                path.push({ x: x + 10*s, y: startY, pressure: 0, lift: true });
+                x += 15 * s;
+                break;
+              default:
+                x += 10 * s;
+            }
+          }
+          return x;
+        };
+
+        // Line 1: "Linton Evans" - signature style (larger)
+        let lineY = 80;
+        writeWord('Linton Evans', 50, lineY, 1.1);
+
+        // Line 2: Title
+        lineY += 55;
+        path.push({ x: 50, y: lineY, pressure: 0, lift: true });
+        writeWord('Product Architect', 50, lineY, 0.85);
+
+        // Line 3: Company
+        lineY += 45;
+        path.push({ x: 50, y: lineY, pressure: 0, lift: true });
+        writeWord('Seventeen years', 50, lineY, 0.8);
+
+        // Line 4: experience
+        lineY += 45;
+        path.push({ x: 50, y: lineY, pressure: 0, lift: true });
+        writeWord('in tech', 50, lineY, 0.8);
+
+        // Signature flourish at end
+        lineY += 60;
+        path.push({ x: 50, y: lineY, pressure: 0, lift: true });
+        addCurve(50, lineY, 150, lineY - 10, 280, lineY + 5, 400, lineY - 5, 0.5);
+
+        return path;
+      }
+
+      // Draw a single ink point on the canvas
+      drawInkPoint(point) {
+        if (point.lift) {
+          this.lastInkPoint = null;
+          return;
+        }
+
+        const ctx = this.inkCtx;
+
+        if (this.lastInkPoint && !this.lastInkPoint.lift) {
+          // Draw line from last point with varying thickness
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(15, 15, 40, ${0.85 + Math.random() * 0.1})`;
+          ctx.lineWidth = 1.5 + point.pressure * 1.5;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.moveTo(this.lastInkPoint.x, this.lastInkPoint.y);
+          ctx.lineTo(point.x, point.y);
+          ctx.stroke();
+
+          // Add slight ink spread for realism
+          if (Math.random() > 0.7) {
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(15, 15, 40, 0.1)';
+            ctx.arc(point.x, point.y, point.pressure * 2 + Math.random(), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        this.lastInkPoint = point;
+      }
+
+      async playSection(index) {
+        this.currentSection = index;
+        this.updateNavigation();
+        const sections = ['welcome', 'about', 'experience', 'skills', 'education', 'contact'];
+        const sectionName = sections[index];
+
+        // Map sections to PDF pages - adjust based on your CV structure
+        // This maps each section to the most relevant page of the PDF
+        const sectionToPage = {
+          welcome: 1,    // First page - intro/header
+          about: 1,      // First page - summary section
+          experience: 2, // Second page - work experience
+          skills: 2,     // Second page - skills section
+          education: 3,  // Third page - education/certifications
+          contact: 4     // Fourth page - contact info (or last page)
+        };
+
+        // Trigger page turn animation to the appropriate page
+        const targetPage = sectionToPage[sectionName];
+        const totalPages = this.pdfBooklet.getTotalPages();
+        if (targetPage && targetPage <= totalPages) {
+          await this.pdfBooklet.turnToPage(targetPage);
+        }
+
+        // Define positions for each section - alternating corners
+        const positions = {
+          welcome: { bubble: 'pos-top-right', panel: 'pos-top-left' },
+          about: { bubble: 'pos-bottom-left', panel: 'pos-bottom-right' },
+          experience: { bubble: 'pos-top-left', panel: 'pos-top-right' },
+          skills: { bubble: 'pos-bottom-right', panel: 'pos-bottom-left' },
+          education: { bubble: 'pos-top-right', panel: 'pos-top-left' },
+          contact: { bubble: 'pos-center', panel: 'pos-bottom-left' }
+        };
+
+        const pos = positions[sectionName];
+        this.updateInfoPanel(sectionName, pos.panel);
+
+        const speech = cvData.speeches[sectionName];
+        const icons = {
+          welcome: '👋',
+          about: '💼',
+          experience: '🚀',
+          skills: '⚡',
+          education: '🎓',
+          contact: '📬'
+        };
+        this.showSpeechBubble(speech, pos.bubble, icons[sectionName]);
+
+        // Wait for user to read the content (based on text length)
+        const readTime = Math.max(4000, speech.length * 50);
+        await new Promise(r => setTimeout(r, readTime));
+
+        if (index < sections.length - 1 && this.isPlaying) {
+          if (this.isPlaying && this.currentSection === index) {
+            this.hideSpeechBubble();
+            this.hideInfoPanel();
+            await new Promise(r => setTimeout(r, 500));
+            this.playSection(index + 1);
+          }
+        }
+      }
+
+      updateInfoPanel(sectionName, position) {
+        const data = {
+          welcome: { title: cvData.personal.name, subtitle: cvData.personal.title, content: `${cvData.personal.location}\n${cvData.personal.email}` },
+          about: { title: 'About Me', subtitle: '17+ Years Experience', content: cvData.shortSummary },
+          experience: { title: 'Experience', subtitle: '4 Key Roles', content: cvData.experience.map(e => `${e.title}\n${e.company}`).join('\n\n') },
+          skills: { title: 'Technical Skills', subtitle: 'Full Stack', content: Object.values(cvData.skills).flat().join(' • ') },
+          education: { title: 'Education', subtitle: cvData.education[0].degree, content: cvData.education[0].institution },
+          contact: { title: "Let's Connect", subtitle: cvData.personal.noticePeriod, content: `${cvData.personal.email}\n${cvData.personal.phone}` }
+        }[sectionName];
+
+        // Remove old position classes and add new one
+        this.infoPanel.className = 'info-panel ' + position;
+        document.getElementById('panel-title').textContent = data.title;
+        document.getElementById('panel-subtitle').textContent = data.subtitle;
+        document.getElementById('panel-content').textContent = data.content;
+
+        // Small delay for position change to take effect before showing
+        requestAnimationFrame(() => {
+          this.infoPanel.classList.add('visible');
+        });
+      }
+
+      hideInfoPanel() {
+        this.infoPanel.classList.remove('visible');
+      }
+
+      showSpeechBubble(text, position, icon = '') {
+        // Remove old position classes
+        this.speechBubble.className = 'speech-bubble ' + position;
+        const iconSpan = icon ? `<span class="section-icon">${icon}</span>` : '';
+        document.getElementById('speech-text').innerHTML = iconSpan + text;
+
+        // Small delay for position change to take effect before showing
+        requestAnimationFrame(() => {
+          this.speechBubble.classList.add('visible');
+        });
+      }
+
+      hideSpeechBubble() {
+        this.speechBubble.classList.remove('visible');
+      }
+
+      updateNavigation() {
+        document.querySelectorAll('.nav-btn').forEach((btn, i) => btn.classList.toggle('active', i === this.currentSection));
+      }
+
+      goToSection(index) {
+        this.isPlaying = false;
+        this.hideSpeechBubble();
+        this.playSection(index);
+      }
+
+      skipToNext() {
+        this.hideSpeechBubble();
+        if (this.currentSection < 5) this.playSection(this.currentSection + 1);
+      }
+
+      onResize() {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      animate() {
+        requestAnimationFrame(() => this.animate());
+        const time = performance.now() * 0.001;
+
+        if (!this.boxUnpacked && this.boxGroup.visible) {
+          this.boxGroup.position.y = Math.sin(time * 0.8) * 0.08;
+          this.boxGroup.rotation.y = 0.3 + Math.sin(time * 0.5) * 0.05;
+        }
+
+        this.renderer.render(this.scene, this.camera);
+      }
+    }
+
+    new App();
+  </script>
+</body>
+</html>
