@@ -10,6 +10,19 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Inter', sans-serif; background: #000; color: #fff; }
 
+    /* Firefox-specific rendering optimizations */
+    @supports (-moz-appearance: none) {
+      /* Disable hardware acceleration for clearer text in Firefox */
+      .pdf-page canvas, .curl-page canvas {
+        image-rendering: auto;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      /* Reduce animation complexity for Firefox */
+      .booklet-container {
+        transition: width 0.3s ease, height 0.3s ease;
+      }
+    }
+
     /* Neural Network Background - ALWAYS visible */
     #neural-bg {
       position: fixed;
@@ -186,26 +199,43 @@
     .speech-bubble .section-icon { display: inline-block; margin-right: 8px; color: #a3e635; }
 
     #pdf-booklet {
-      position: fixed; top: 50%; left: 50%;
-      transform: translate(-50%, -50%) scale(0.3) rotateY(90deg);
-      display: none; z-index: 150; perspective: 2000px;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      display: none; z-index: 150;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
       opacity: 0;
-      transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s ease;
+      transition: opacity 0.6s ease;
     }
     #pdf-booklet.visible {
-      display: block;
-      transform: translate(-50%, -50%) scale(1) rotateY(0deg);
+      display: flex;
       opacity: 1;
+    }
+    #pdf-booklet.entering .booklet-container {
+      animation: bookletEnter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    @keyframes bookletEnter {
+      from { transform: scale(0.3) rotateY(90deg); opacity: 0; }
+      to { transform: scale(1) rotateY(0deg); opacity: 1; }
     }
     .booklet-container {
       position: relative;
-      width: 450px; height: 620px;
+      /* Dynamic sizing based on viewport - will be set by JS */
+      width: var(--booklet-width, 450px);
+      height: var(--booklet-height, 620px);
       transform-style: preserve-3d;
-      transform: scale(1.25);
-      transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.15s ease-out;
+      transform: translateY(var(--scroll-offset, 0px));
     }
-    .booklet-container.zoomed { transform: scale(1.5) translateY(var(--scroll-offset, 0px)); }
-    .booklet-container.zoomed-max { transform: scale(1.9) translateY(var(--scroll-offset, 0px)); }
+    .booklet-container.zoomed {
+      width: var(--booklet-width-zoomed, 550px);
+      height: var(--booklet-height-zoomed, 760px);
+    }
+    .booklet-container.zoomed-max {
+      width: var(--booklet-width-max, 650px);
+      height: var(--booklet-height-max, 900px);
+    }
 
     /* Let's Go popup */
     #lets-go-popup {
@@ -341,37 +371,41 @@
     /* Single page view - main page container */
     .page-stack {
       position: relative;
-      width: 100%; height: 580px;
+      width: 100%;
+      height: 100%;
       transform-style: preserve-3d;
     }
 
     /* Individual page styling */
     .pdf-page {
       position: absolute;
-      width: 430px; height: 580px;
-      left: 50%; top: 0;
-      transform: translateX(-50%);
+      width: 100%;
+      height: 100%;
+      left: 0; top: 0;
       background: #fff; border-radius: 8px;
       box-shadow: 0 15px 50px rgba(0,0,0,0.6), 0 5px 15px rgba(0,0,0,0.3);
       overflow: hidden; cursor: zoom-in;
-      transform-style: preserve-3d;
-      backface-visibility: hidden;
     }
     .pdf-page:hover { box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 8px 20px rgba(0,0,0,0.4); }
     .booklet-container.zoomed .pdf-page, .booklet-container.zoomed-max .pdf-page { cursor: zoom-out; }
-    .pdf-page canvas { width: 100%; height: 100%; object-fit: contain; }
+    .pdf-page canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      /* Use high quality rendering */
+      image-rendering: auto;
+      image-rendering: high-quality;
+    }
 
     /* Current page - visible */
     .pdf-page.current {
       z-index: 10;
-      transform: translateX(-50%);
       opacity: 1;
     }
 
     /* Next page - hidden underneath */
     .pdf-page.next {
       z-index: 5;
-      transform: translateX(-50%);
       opacity: 0;
     }
 
@@ -383,9 +417,9 @@
     /* Curl container that holds the curling page */
     .page-curl-container {
       position: absolute;
-      width: 430px; height: 580px;
-      left: 50%; top: 0;
-      transform: translateX(-50%);
+      width: 100%;
+      height: 100%;
+      left: 0; top: 0;
       transform-style: preserve-3d;
       perspective: 1200px;
       z-index: 20;
@@ -405,7 +439,6 @@
       height: 100%;
       transform-style: preserve-3d;
       transform-origin: bottom left;
-      will-change: transform, opacity;
       border-radius: 8px;
       overflow: hidden;
       background: #fff;
@@ -416,6 +449,8 @@
       width: 100%;
       height: 100%;
       display: block;
+      image-rendering: auto;
+      image-rendering: high-quality;
     }
 
     /* Shadow that appears under the curling page */
@@ -474,17 +509,17 @@
     /* New page smoothly revealed underneath */
     @keyframes pageRevealSmooth {
       0% {
-        transform: translateX(-50%) scale(0.97);
+        transform: scale(0.97);
         opacity: 0.3;
         box-shadow: 0 5px 15px rgba(0,0,0,0.15);
       }
       40% {
-        transform: translateX(-50%) scale(0.99);
+        transform: scale(0.99);
         opacity: 0.7;
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
       }
       100% {
-        transform: translateX(-50%) scale(1);
+        transform: scale(1);
         opacity: 1;
         box-shadow: 0 15px 50px rgba(0,0,0,0.5);
       }
@@ -494,9 +529,9 @@
     .page-stack::before {
       content: '';
       position: absolute;
-      width: 428px; height: 578px;
-      left: 50%; top: 2px;
-      transform: translateX(-50%);
+      width: calc(100% - 4px);
+      height: calc(100% - 4px);
+      left: 2px; top: 4px;
       background: #f5f5f5;
       border-radius: 8px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
@@ -505,9 +540,9 @@
     .page-stack::after {
       content: '';
       position: absolute;
-      width: 426px; height: 576px;
-      left: 50%; top: 4px;
-      transform: translateX(-50%);
+      width: calc(100% - 8px);
+      height: calc(100% - 8px);
+      left: 4px; top: 6px;
       background: #eee;
       border-radius: 8px;
       box-shadow: 0 8px 25px rgba(0,0,0,0.25);
@@ -517,13 +552,13 @@
     /* Hide spine in single page mode */
     .booklet-spine { display: none; }
 
-    .booklet-nav { position: absolute; bottom: -85px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 15px; background: rgba(10,10,15,0.9); padding: 14px 28px; border-radius: 35px; border: 1px solid rgba(163,230,53,0.3); }
+    .booklet-nav { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 15px; background: rgba(10,10,15,0.9); padding: 14px 28px; border-radius: 35px; border: 1px solid rgba(163,230,53,0.3); z-index: 160; }
     .booklet-nav button { width: 40px; height: 40px; border-radius: 50%; background: rgba(163,230,53,0.2); border: 1px solid rgba(163,230,53,0.4); color: #a3e635; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
     .booklet-nav button:hover:not(:disabled) { background: rgba(163,230,53,0.4); transform: scale(1.1); }
     .booklet-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
     .booklet-nav button svg { width: 20px; height: 20px; }
     .page-indicator { font-family: 'Space Grotesk', sans-serif; font-size: 0.9rem; color: #fff; min-width: 80px; text-align: center; }
-    .booklet-close { position: absolute; top: -50px; right: 10px; width: 40px; height: 40px; border-radius: 50%; background: rgba(10,10,15,0.9); border: 1px solid rgba(255,255,255,0.2); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
+    .booklet-close { position: fixed; top: 30px; right: 30px; width: 40px; height: 40px; border-radius: 50%; background: rgba(10,10,15,0.9); border: 1px solid rgba(255,255,255,0.2); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; z-index: 160; }
     .booklet-close:hover { background: rgba(255,100,100,0.3); transform: scale(1.1); }
     #zoom-btn { background: rgba(74,144,217,0.2); border-color: rgba(74,144,217,0.4); color: #4a90d9; }
     #zoom-btn.active { background: rgba(74,144,217,0.5); }
@@ -532,33 +567,74 @@
     #view-cv-btn.visible { display: block; }
     #view-cv-btn:hover { background: rgba(163,230,53,0.2); }
 
+    /* Zoom hint tooltip */
+    .zoom-hint {
+      position: fixed;
+      top: 50%;
+      right: 30px;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(10, 10, 15, 0.95);
+      backdrop-filter: blur(20px);
+      padding: 12px 18px;
+      border-radius: 30px;
+      border: 1px solid rgba(163, 230, 53, 0.4);
+      color: #fff;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 160;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+    }
+    .zoom-hint.visible {
+      opacity: 1;
+      animation: hintPulse 2s ease-in-out infinite, hintFadeIn 0.5s ease-out;
+    }
+    .zoom-hint .arrow {
+      width: 24px;
+      height: 24px;
+      color: #a3e635;
+      animation: arrowBounce 1s ease-in-out infinite;
+    }
+    .zoom-hint .hint-text {
+      color: rgba(255,255,255,0.9);
+    }
+    .zoom-hint .hint-text strong {
+      color: #a3e635;
+    }
+    @keyframes hintPulse {
+      0%, 100% { box-shadow: 0 5px 20px rgba(0,0,0,0.4), 0 0 0 0 rgba(163, 230, 53, 0.4); }
+      50% { box-shadow: 0 5px 20px rgba(0,0,0,0.4), 0 0 0 8px rgba(163, 230, 53, 0); }
+    }
+    @keyframes hintFadeIn {
+      from { opacity: 0; transform: translateY(-50%) translateX(20px); }
+      to { opacity: 1; transform: translateY(-50%) translateX(0); }
+    }
+    @keyframes arrowBounce {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(-8px); }
+    }
+    /* Hide zoom hint when already zoomed */
+    .booklet-container.zoomed ~ .zoom-hint,
+    .booklet-container.zoomed-max ~ .zoom-hint { display: none; }
+
     /* ========== MOBILE RESPONSIVE STYLES ========== */
 
     /* Tablets and small laptops */
     @media (max-width: 1024px) {
-      .booklet-container { width: 400px; height: 550px; }
-      .pdf-page { width: 380px; height: 520px; }
-      .page-stack { height: 520px; }
-      .page-curl-container { width: 380px; height: 520px; }
-
       .speech-bubble { max-width: 280px; }
       .info-panel { max-width: 280px; padding: 20px; }
     }
 
     /* Mobile landscape and small tablets */
     @media (max-width: 768px) {
-      .booklet-container { width: 340px; height: 470px; }
-      .pdf-page { width: 320px; height: 440px; }
-      .page-stack { height: 440px; }
-      .page-curl-container { width: 320px; height: 440px; }
-
-      /* Reduce zoom levels on mobile */
-      .booklet-container.zoomed { transform: scale(1.2) translateY(var(--scroll-offset, 0px)); }
-      .booklet-container.zoomed-max { transform: scale(1.4) translateY(var(--scroll-offset, 0px)); }
-
-      .booklet-nav { bottom: -75px; padding: 10px 20px; gap: 10px; }
+      .booklet-nav { bottom: 20px; padding: 10px 20px; gap: 10px; }
       .booklet-nav button { width: 36px; height: 36px; }
-      .booklet-close { top: -45px; width: 36px; height: 36px; }
+      .booklet-close { top: 15px; right: 15px; width: 36px; height: 36px; }
 
       .audio-controls { top: 15px; right: 15px; gap: 8px; }
       .audio-btn { width: 38px; height: 38px; }
@@ -581,26 +657,20 @@
       #contact-persistent { top: 70px; right: 15px; padding: 15px 18px; }
       #contact-persistent h4 { font-size: 0.9rem; }
       #contact-persistent .contact-item { font-size: 0.8rem; }
+
+      .zoom-hint { right: 15px; }
     }
 
     /* Mobile portrait */
     @media (max-width: 480px) {
-      .booklet-container { width: calc(100vw - 30px); height: calc((100vw - 30px) * 1.35); max-height: 70vh; }
-      .pdf-page { width: calc(100vw - 50px); height: calc((100vw - 50px) * 1.35); max-height: calc(70vh - 20px); }
-      .page-stack { height: calc((100vw - 50px) * 1.35); max-height: calc(70vh - 20px); }
-      .page-curl-container { width: calc(100vw - 50px); height: calc((100vw - 50px) * 1.35); max-height: calc(70vh - 20px); }
+      /* Dynamic sizing handled by JS, just adjust padding */
+      #pdf-booklet { padding: 10px; padding-bottom: 80px; }
 
-      /* Disable extra zoom on small screens */
-      .booklet-container.zoomed { transform: scale(1.1) translateY(var(--scroll-offset, 0px)); }
-      .booklet-container.zoomed-max { transform: scale(1.2) translateY(var(--scroll-offset, 0px)); }
-
-      #pdf-booklet { top: 45%; }
-
-      .booklet-nav { bottom: -65px; padding: 8px 15px; gap: 8px; border-radius: 30px; }
+      .booklet-nav { bottom: 15px; padding: 8px 15px; gap: 8px; border-radius: 30px; }
       .booklet-nav button { width: 32px; height: 32px; }
       .booklet-nav button svg { width: 16px; height: 16px; }
       .page-indicator { font-size: 0.8rem; min-width: 60px; }
-      .booklet-close { top: -40px; right: 5px; width: 32px; height: 32px; }
+      .booklet-close { top: 10px; right: 10px; width: 32px; height: 32px; }
 
       .audio-controls { top: 10px; right: 10px; gap: 6px; }
       .audio-btn { width: 34px; height: 34px; }
@@ -629,6 +699,11 @@
       }
 
       .info-panel { display: none; } /* Hide info panel on small mobile */
+
+      /* Reposition zoom hint on mobile - below the nav */
+      .zoom-hint {
+        display: none; /* Hide on very small screens */
+      }
 
       #lets-go-popup { font-size: 1.8rem; }
 
@@ -737,6 +812,12 @@
         <div class="page-curl-container" id="curl-container"></div>
       </div>
     </div>
+    <div class="zoom-hint" id="zoom-hint">
+      <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+      <span class="hint-text"><strong>Click page</strong> to zoom in</span>
+    </div>
     <button class="booklet-close" id="close-booklet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     <div class="booklet-nav">
       <button id="prev-page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
@@ -783,6 +864,12 @@
       const connections = [];
       let width, height, time = 0;
 
+      // Detect Firefox for performance optimization
+      const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+      let lastFrameTime = 0;
+      const targetFPS = isFirefox ? 30 : 60; // Lower FPS for Firefox
+      const frameInterval = 1000 / targetFPS;
+
       function resize() {
         width = window.innerWidth;
         height = window.innerHeight;
@@ -794,7 +881,9 @@
       function initNodes() {
         nodes.length = 0;
         connections.length = 0;
-        const count = Math.floor((width * height) / 15000);
+        // Fewer nodes for Firefox
+        const divisor = isFirefox ? 25000 : 15000;
+        const count = Math.floor((width * height) / divisor);
 
         for (let i = 0; i < count; i++) {
           nodes.push({
@@ -808,8 +897,19 @@
         }
       }
 
-      function draw() {
-        time += 0.01;
+      function draw(currentTime) {
+        // Frame rate limiting
+        const deltaTime = currentTime - lastFrameTime;
+        if (deltaTime < frameInterval) {
+          requestAnimationFrame(draw);
+          return;
+        }
+
+        // Calculate speed multiplier to normalize movement across different frame rates
+        const speedMultiplier = deltaTime / 16.67; // 16.67ms = 60fps baseline
+        lastFrameTime = currentTime;
+
+        time += 0.01 * speedMultiplier;
 
         // Dark gradient background
         const grad = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, Math.max(width, height) * 0.8);
@@ -820,9 +920,9 @@
 
         // Update and draw nodes
         nodes.forEach((node, i) => {
-          // Move
-          node.x += node.vx;
-          node.y += node.vy;
+          // Move (adjusted for frame rate)
+          node.x += node.vx * speedMultiplier;
+          node.y += node.vy * speedMultiplier;
 
           // Bounce
           if (node.x < 0 || node.x > width) node.vx *= -1;
@@ -875,7 +975,7 @@
 
       resize();
       window.addEventListener('resize', resize);
-      draw();
+      requestAnimationFrame(draw);
     })();
   </script>
 
@@ -961,6 +1061,9 @@
         this.pageHeight = 580;
         this.animationDuration = 1400; // ms
 
+        // Page aspect ratio (A4-ish)
+        this.pageAspect = 580 / 430; // height / width
+
         // Scroll state for zoomed view
         this.scrollOffset = 0;
         this.scrollVelocity = 0;
@@ -977,6 +1080,51 @@
 
         // Setup scroll handlers
         this.setupScrollHandlers();
+
+        // Calculate and set dynamic sizes
+        this.calculateSizes();
+        window.addEventListener('resize', () => this.calculateSizes());
+      }
+
+      calculateSizes() {
+        // Get available viewport space (accounting for nav bar at bottom)
+        const navHeight = 100; // Space for bottom nav
+        const padding = 60; // Top/side padding
+        const availHeight = window.innerHeight - navHeight - padding;
+        const availWidth = window.innerWidth - padding * 2;
+
+        // Calculate base size to fit viewport while maintaining aspect ratio
+        let baseWidth, baseHeight;
+        if (availWidth / availHeight > 1 / this.pageAspect) {
+          // Height constrained
+          baseHeight = Math.min(availHeight * 0.85, 750);
+          baseWidth = baseHeight / this.pageAspect;
+        } else {
+          // Width constrained
+          baseWidth = Math.min(availWidth * 0.85, 550);
+          baseHeight = baseWidth * this.pageAspect;
+        }
+
+        // Zoom level 1 (zoomed)
+        const zoomedWidth = Math.min(baseWidth * 1.25, availWidth * 0.95);
+        const zoomedHeight = zoomedWidth * this.pageAspect;
+
+        // Zoom level 2 (max zoom)
+        const maxWidth = Math.min(baseWidth * 1.5, availWidth * 0.98);
+        const maxHeight = maxWidth * this.pageAspect;
+
+        // Set CSS custom properties
+        const root = document.documentElement;
+        root.style.setProperty('--booklet-width', `${baseWidth}px`);
+        root.style.setProperty('--booklet-height', `${baseHeight}px`);
+        root.style.setProperty('--booklet-width-zoomed', `${zoomedWidth}px`);
+        root.style.setProperty('--booklet-height-zoomed', `${zoomedHeight}px`);
+        root.style.setProperty('--booklet-width-max', `${maxWidth}px`);
+        root.style.setProperty('--booklet-height-max', `${maxHeight}px`);
+
+        // Update internal dimensions for curl calculations
+        this.pageWidth = baseWidth;
+        this.pageHeight = baseHeight;
       }
 
       setupScrollHandlers() {
@@ -984,6 +1132,8 @@
         this.container.addEventListener('wheel', (e) => {
           if (this.zoomLevel === 0) return;
           e.preventDefault();
+          // Add to velocity for momentum feel
+          this.scrollVelocity += e.deltaY * 0.3;
           this.scrollOffset += e.deltaY * 0.5;
           this.clampAndApplyScroll();
         }, { passive: false });
@@ -1050,31 +1200,42 @@
       }
 
       animateBounceBack() {
+        // Cancel any existing animation
+        if (this.bounceAnimationId) {
+          cancelAnimationFrame(this.bounceAnimationId);
+        }
+
         const animate = () => {
           if (this.isDragging) return;
 
           // Apply momentum
-          this.scrollOffset += this.scrollVelocity * 0.3;
-          this.scrollVelocity *= 0.92; // Friction
+          this.scrollOffset += this.scrollVelocity * 0.4;
+          this.scrollVelocity *= 0.88; // Friction
 
-          // Bounce back if beyond limits
+          // Bounce back if beyond limits with elastic effect
           if (this.scrollOffset > this.maxScroll) {
-            this.scrollOffset += (this.maxScroll - this.scrollOffset) * 0.15;
-            this.scrollVelocity *= 0.5;
+            const overshoot = this.scrollOffset - this.maxScroll;
+            this.scrollOffset -= overshoot * 0.2;
+            this.scrollVelocity *= 0.6;
           } else if (this.scrollOffset < -this.maxScroll) {
-            this.scrollOffset += (-this.maxScroll - this.scrollOffset) * 0.15;
-            this.scrollVelocity *= 0.5;
+            const overshoot = -this.maxScroll - this.scrollOffset;
+            this.scrollOffset += overshoot * 0.2;
+            this.scrollVelocity *= 0.6;
           }
 
           this.applyScroll();
 
-          // Continue animation if still moving or bouncing
-          if (Math.abs(this.scrollVelocity) > 0.5 ||
-              Math.abs(this.scrollOffset) > this.maxScroll + 1) {
-            requestAnimationFrame(animate);
+          // Continue animation if still moving or bouncing back
+          const isMoving = Math.abs(this.scrollVelocity) > 0.3;
+          const isBouncing = Math.abs(this.scrollOffset) > this.maxScroll;
+
+          if (isMoving || isBouncing) {
+            this.bounceAnimationId = requestAnimationFrame(animate);
+          } else {
+            this.bounceAnimationId = null;
           }
         };
-        requestAnimationFrame(animate);
+        this.bounceAnimationId = requestAnimationFrame(animate);
       }
 
       toggleZoom() {
@@ -1083,11 +1244,20 @@
         if (this.zoomLevel === 1) this.bookletContainer.classList.add('zoomed');
         else if (this.zoomLevel === 2) this.bookletContainer.classList.add('zoomed-max');
 
-        // Reset scroll when changing zoom
+        // Hide zoom hint when user zooms
+        if (this.zoomLevel > 0) {
+          document.getElementById('zoom-hint').classList.remove('visible');
+        }
+
+        // Reset scroll when exiting zoom
         if (this.zoomLevel === 0) {
           this.scrollOffset = 0;
           this.applyScroll();
         }
+
+        // Update zoom button state
+        const zoomBtn = document.getElementById('zoom-btn');
+        zoomBtn.classList.toggle('active', this.zoomLevel > 0);
       }
 
       async loadPDF(url) {
@@ -1111,7 +1281,7 @@
         }
         const page = await this.pdfDoc.getPage(pageNum);
         const vp = page.getViewport({ scale: 1 });
-        const scale = Math.min(430 / vp.width, 580 / vp.height) * 2;
+        const scale = Math.min(430 / vp.width, 580 / vp.height) * 3.5;
         const scaledVp = page.getViewport({ scale });
         canvas.width = scaledVp.width;
         canvas.height = scaledVp.height;
@@ -1325,16 +1495,32 @@
       }
 
       show() {
-        this.container.style.display = 'block';
-        // Trigger reflow then add visible class for animation
+        // Recalculate sizes before showing
+        this.calculateSizes();
+
+        this.container.style.display = 'flex';
+        // Add entering class for animation
+        this.container.classList.add('entering');
+        // Trigger reflow then add visible class
         this.container.offsetHeight;
         requestAnimationFrame(() => {
           this.container.classList.add('visible');
+          // Remove entering class after animation
+          setTimeout(() => {
+            this.container.classList.remove('entering');
+          }, 850);
+          // Show zoom hint after booklet appears
+          setTimeout(() => {
+            if (this.zoomLevel === 0) {
+              document.getElementById('zoom-hint').classList.add('visible');
+            }
+          }, 1200);
         });
       }
 
       hide() {
-        this.container.classList.remove('visible');
+        this.container.classList.remove('visible', 'entering');
+        document.getElementById('zoom-hint').classList.remove('visible');
         setTimeout(() => {
           if (!this.container.classList.contains('visible')) {
             this.container.style.display = 'none';
