@@ -1,0 +1,19 @@
+{
+  "name": "linton-evans-3d-cv",
+  "version": "1.0.0",
+  "description": "Interactive 3D CV Portfolio for Linton Evans",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.160.0",
+    "gsap": "^3.12.4",
+    "@tweenjs/tween.js": "^21.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.10"
+  }
+}

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Linton Evans - Technical Specialist | Interactive 3D Portfolio">
+  <meta name="author" content="Linton Evans">
+  <title>Linton Evans | Technical Specialist - 3D Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0a0a0f;
+      color: #ffffff;
+    }
+
+    #app {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /* Loading Screen */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    #loading-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .loading-box {
+      width: 80px;
+      height: 80px;
+      position: relative;
+      transform-style: preserve-3d;
+      animation: rotateBox 2s ease-in-out infinite;
+    }
+
+    .loading-box::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #a3e635 0%, #65a30d 100%);
+      border-radius: 8px;
+      animation: pulse 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes rotateBox {
+      0%, 100% { transform: rotateY(0deg) rotateX(0deg); }
+      25% { transform: rotateY(90deg) rotateX(10deg); }
+      50% { transform: rotateY(180deg) rotateX(0deg); }
+      75% { transform: rotateY(270deg) rotateX(-10deg); }
+    }
+
+    @keyframes pulse {
+      from { box-shadow: 0 0 20px rgba(163, 230, 53, 0.4); }
+      to { box-shadow: 0 0 40px rgba(163, 230, 53, 0.8); }
+    }
+
+    .loading-text {
+      margin-top: 30px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: #a3e635;
+      letter-spacing: 2px;
+    }
+
+    .loading-progress {
+      margin-top: 20px;
+      width: 200px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .loading-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #a3e635, #65a30d);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* UI Overlay */
+    #ui-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    #ui-overlay > * {
+      pointer-events: auto;
+    }
+
+    /* Navigation */
+    .nav-container {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+      background: rgba(10, 10, 15, 0.8);
+      backdrop-filter: blur(20px);
+      padding: 12px 20px;
+      border-radius: 50px;
+      border: 1px solid rgba(163, 230, 53, 0.2);
+    }
+
+    .nav-btn {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .nav-btn:hover {
+      background: rgba(163, 230, 53, 0.6);
+      transform: scale(1.2);
+    }
+
+    .nav-btn.active {
+      background: #a3e635;
+      box-shadow: 0 0 15px rgba(163, 230, 53, 0.6);
+    }
+
+    /* Audio Controls */
+    .audio-controls {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .audio-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(10, 10, 15, 0.8);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(163, 230, 53, 0.3);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .audio-btn:hover {
+      border-color: #a3e635;
+      background: rgba(163, 230, 53, 0.1);
+    }
+
+    .audio-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Start Button */
+    #start-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 18px 50px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #a3e635 0%, #65a30d 100%);
+      color: #0a0a0f;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 30px rgba(163, 230, 53, 0.4);
+      display: none;
+    }
+
+    #start-btn:hover {
+      transform: translate(-50%, -50%) scale(1.05);
+      box-shadow: 0 0 50px rgba(163, 230, 53, 0.6);
+    }
+
+    #start-btn.visible {
+      display: block;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, -40%); }
+      to { opacity: 1; transform: translate(-50%, -50%); }
+    }
+
+    /* Info Panel */
+    .info-panel {
+      position: absolute;
+      top: 30px;
+      left: 30px;
+      max-width: 350px;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(20px);
+      padding: 25px;
+      border-radius: 16px;
+      border: 1px solid rgba(163, 230, 53, 0.2);
+      opacity: 0;
+      transform: translateX(-20px);
+      transition: all 0.5s ease;
+    }
+
+    .info-panel.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .info-panel h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #a3e635;
+    }
+
+    .info-panel h3 {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 15px;
+    }
+
+    .info-panel p {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    /* Speech Bubble */
+    .speech-bubble {
+      position: absolute;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 600px;
+      background: rgba(10, 10, 15, 0.9);
+      backdrop-filter: blur(20px);
+      padding: 20px 30px;
+      border-radius: 20px;
+      border: 1px solid rgba(163, 230, 53, 0.3);
+      opacity: 0;
+      transition: all 0.4s ease;
+    }
+
+    .speech-bubble.visible {
+      opacity: 1;
+    }
+
+    .speech-bubble p {
+      font-size: 1rem;
+      line-height: 1.6;
+      text-align: center;
+    }
+
+    .speech-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-top: 10px solid rgba(10, 10, 15, 0.9);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .info-panel {
+        top: auto;
+        bottom: 100px;
+        left: 20px;
+        right: 20px;
+        max-width: none;
+      }
+
+      .nav-container {
+        bottom: 20px;
+      }
+
+      .audio-controls {
+        top: 20px;
+        right: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="loading-box"></div>
+      <div class="loading-text">LOADING PORTFOLIO</div>
+      <div class="loading-progress">
+        <div class="loading-progress-bar" id="progress-bar"></div>
+      </div>
+    </div>
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay -->
+    <div id="ui-overlay">
+      <!-- Start Button -->
+      <button id="start-btn">Open My CV</button>
+
+      <!-- Audio Controls -->
+      <div class="audio-controls">
+        <button class="audio-btn" id="mute-btn" title="Toggle Audio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+        </button>
+        <button class="audio-btn" id="skip-btn" title="Skip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 4 15 12 5 20 5 4"></polygon>
+            <line x1="19" y1="5" x2="19" y2="19"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Info Panel -->
+      <div class="info-panel" id="info-panel">
+        <h2 id="panel-title"></h2>
+        <h3 id="panel-subtitle"></h3>
+        <p id="panel-content"></p>
+      </div>
+
+      <!-- Navigation -->
+      <div class="nav-container" id="nav-container" style="display: none;">
+        <button class="nav-btn active" data-section="0" title="Welcome"></button>
+        <button class="nav-btn" data-section="1" title="About"></button>
+        <button class="nav-btn" data-section="2" title="Experience"></button>
+        <button class="nav-btn" data-section="3" title="Skills"></button>
+        <button class="nav-btn" data-section="4" title="Education"></button>
+        <button class="nav-btn" data-section="5" title="Contact"></button>
+      </div>
+
+      <!-- Speech Bubble -->
+      <div class="speech-bubble" id="speech-bubble">
+        <p id="speech-text"></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
