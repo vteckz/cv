@@ -195,101 +195,136 @@
       opacity: 0;
     }
 
-    /* Page turn animations - natural corner peel effect */
+    /* ============================================
+       PAPER CURL PAGE TURN SYSTEM
+       Uses multiple strips to create realistic bend
+       ============================================ */
+
+    /* Curl container that holds the page strips */
+    .page-curl-container {
+      position: absolute;
+      width: 430px; height: 580px;
+      left: 50%; top: 0;
+      transform: translateX(-50%);
+      transform-style: preserve-3d;
+      perspective: 1500px;
+      z-index: 20;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .page-curl-container.active {
+      opacity: 1;
+    }
+
+    /* Each strip is a vertical slice of the page */
+    .curl-strip {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+      overflow: hidden;
+      background: #fff;
+      will-change: transform, opacity, filter;
+      border-radius: 0;
+    }
+
+    /* First and last strips get rounded corners */
+    .curl-strip:first-child {
+      border-radius: 8px 0 0 8px;
+    }
+
+    .curl-strip:last-child {
+      border-radius: 0 8px 8px 0;
+    }
+
+    /* Strip shadow overlay for depth - simulates light on curved surface */
+    .curl-strip::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(
+        to right,
+        rgba(255,255,255,0.1) 0%,
+        rgba(0,0,0,0) 30%,
+        rgba(0,0,0,0.08) 70%,
+        rgba(0,0,0,0.15) 100%
+      );
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      pointer-events: none;
+    }
+
+    .curl-strip.curling::after {
+      opacity: 1;
+    }
+
+    /* Paper texture hint */
+    .curl-strip::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(255,255,255,0.05) 0%,
+        rgba(0,0,0,0.02) 50%,
+        rgba(255,255,255,0.03) 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Realistic page turn animations - used as fallback/next page */
     .pdf-page.turning-out {
-      animation: cornerPeelOut 0.9s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+      animation: simpleFadeOut 1.4s ease-in-out forwards;
       z-index: 15;
-      transform-origin: bottom left;
     }
     .pdf-page.turning-in {
-      animation: fadeReveal 0.9s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+      animation: pageReveal 1.4s cubic-bezier(0.23, 1, 0.32, 1) forwards;
       z-index: 10;
     }
 
     /* Backward page turn */
     .pdf-page.turning-back-out {
-      animation: cornerPeelBackOut 0.9s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+      animation: simpleFadeOut 1.4s ease-in-out forwards;
       z-index: 15;
-      transform-origin: bottom right;
     }
     .pdf-page.turning-back-in {
-      animation: fadeReveal 0.9s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+      animation: pageReveal 1.4s cubic-bezier(0.23, 1, 0.32, 1) forwards;
       z-index: 10;
     }
 
-    /* Forward turn - corner peels from top-right, curling over */
-    @keyframes cornerPeelOut {
-      0% {
-        transform: translateX(-50%) rotateZ(0deg) rotateY(0deg) rotateX(0deg);
-        opacity: 1;
-        box-shadow: 0 15px 50px rgba(0,0,0,0.6);
-      }
-      15% {
-        transform: translateX(-50%) rotateZ(-2deg) rotateY(-5deg) rotateX(2deg);
-        opacity: 1;
-        box-shadow: 5px 15px 45px rgba(0,0,0,0.5);
-      }
-      40% {
-        transform: translateX(-48%) rotateZ(-8deg) rotateY(-45deg) rotateX(5deg);
-        opacity: 1;
-        box-shadow: 15px 10px 35px rgba(0,0,0,0.4);
-      }
-      70% {
-        transform: translateX(-40%) rotateZ(-12deg) rotateY(-110deg) rotateX(8deg);
-        opacity: 0.7;
-        box-shadow: 25px 5px 25px rgba(0,0,0,0.25);
-      }
-      100% {
-        transform: translateX(-30%) rotateZ(-15deg) rotateY(-160deg) rotateX(10deg);
-        opacity: 0;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      }
+    @keyframes simpleFadeOut {
+      0% { opacity: 1; }
+      50% { opacity: 1; }
+      100% { opacity: 0; }
     }
 
-    /* New page fades in from underneath */
-    @keyframes fadeReveal {
+    /* New page smoothly revealed underneath */
+    @keyframes pageReveal {
       0% {
         transform: translateX(-50%) scale(0.98);
         opacity: 0;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        filter: brightness(0.92);
       }
-      40% {
+      30% {
         transform: translateX(-50%) scale(0.99);
-        opacity: 0.3;
+        opacity: 0.5;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+        filter: brightness(0.96);
+      }
+      60% {
+        transform: translateX(-50%) scale(0.995);
+        opacity: 0.85;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+        filter: brightness(0.98);
       }
       100% {
         transform: translateX(-50%) scale(1);
         opacity: 1;
-        box-shadow: 0 15px 50px rgba(0,0,0,0.6);
-      }
-    }
-
-    /* Backward turn - corner peels from top-left */
-    @keyframes cornerPeelBackOut {
-      0% {
-        transform: translateX(-50%) rotateZ(0deg) rotateY(0deg) rotateX(0deg);
-        opacity: 1;
-        box-shadow: 0 15px 50px rgba(0,0,0,0.6);
-      }
-      15% {
-        transform: translateX(-50%) rotateZ(2deg) rotateY(5deg) rotateX(2deg);
-        opacity: 1;
-        box-shadow: -5px 15px 45px rgba(0,0,0,0.5);
-      }
-      40% {
-        transform: translateX(-52%) rotateZ(8deg) rotateY(45deg) rotateX(5deg);
-        opacity: 1;
-        box-shadow: -15px 10px 35px rgba(0,0,0,0.4);
-      }
-      70% {
-        transform: translateX(-60%) rotateZ(12deg) rotateY(110deg) rotateX(8deg);
-        opacity: 0.7;
-        box-shadow: -25px 5px 25px rgba(0,0,0,0.25);
-      }
-      100% {
-        transform: translateX(-70%) rotateZ(15deg) rotateY(160deg) rotateX(10deg);
-        opacity: 0;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+        filter: brightness(1);
       }
     }
 
@@ -351,6 +386,7 @@
       <div class="page-stack">
         <div class="pdf-page current" id="page-current"><canvas id="canvas-current"></canvas></div>
         <div class="pdf-page next" id="page-next"><canvas id="canvas-next"></canvas></div>
+        <div class="page-curl-container" id="curl-container"></div>
       </div>
     </div>
     <button class="booklet-close" id="close-booklet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
@@ -541,6 +577,13 @@
         this.canvasCurrent = document.getElementById('canvas-current');
         this.canvasNext = document.getElementById('canvas-next');
         this.pageIndicator = document.getElementById('page-indicator');
+        this.curlContainer = document.getElementById('curl-container');
+
+        // Paper curl configuration
+        this.numStrips = 12; // Number of vertical strips for curl effect
+        this.pageWidth = 430;
+        this.pageHeight = 580;
+        this.animationDuration = 1400; // ms
 
         document.getElementById('prev-page').addEventListener('click', () => this.prevPage());
         document.getElementById('next-page').addEventListener('click', () => this.nextPage());
@@ -594,7 +637,139 @@
         document.getElementById('next-page').disabled = this.currentPage >= this.totalPages;
       }
 
-      // Animate page turn to a specific page
+      // Create paper curl strips from the current page canvas
+      createCurlStrips(sourceCanvas, goingForward) {
+        this.curlContainer.innerHTML = '';
+        const stripWidth = this.pageWidth / this.numStrips;
+
+        for (let i = 0; i < this.numStrips; i++) {
+          const strip = document.createElement('div');
+          strip.className = 'curl-strip';
+
+          // Position each strip
+          const xPos = goingForward ? i * stripWidth : (this.numStrips - 1 - i) * stripWidth;
+          strip.style.left = `${xPos}px`;
+          strip.style.width = `${stripWidth + 1}px`; // +1 to avoid gaps
+          strip.style.transformOrigin = goingForward ? 'left center' : 'right center';
+
+          // Create canvas for this strip showing portion of page
+          const stripCanvas = document.createElement('canvas');
+          stripCanvas.width = Math.ceil(sourceCanvas.width / this.numStrips) + 2;
+          stripCanvas.height = sourceCanvas.height;
+          const ctx = stripCanvas.getContext('2d');
+
+          // Calculate source position (account for high-res canvas)
+          const srcX = (goingForward ? i : (this.numStrips - 1 - i)) * (sourceCanvas.width / this.numStrips);
+          ctx.drawImage(
+            sourceCanvas,
+            srcX, 0, sourceCanvas.width / this.numStrips + 2, sourceCanvas.height,
+            0, 0, stripCanvas.width, stripCanvas.height
+          );
+
+          stripCanvas.style.width = '100%';
+          stripCanvas.style.height = '100%';
+          stripCanvas.style.position = 'absolute';
+          stripCanvas.style.left = '0';
+          stripCanvas.style.top = '0';
+
+          strip.appendChild(stripCanvas);
+          this.curlContainer.appendChild(strip);
+        }
+      }
+
+      // Smooth easing function for natural paper movement
+      easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+      }
+
+      easeInOutQuad(t) {
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      }
+
+      // Animate the paper curl effect
+      async animateCurl(goingForward) {
+        const strips = this.curlContainer.querySelectorAll('.curl-strip');
+        const startTime = performance.now();
+        const duration = this.animationDuration;
+
+        return new Promise(resolve => {
+          const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            strips.forEach((strip, i) => {
+              // Each strip starts its rotation at a different time (cascade effect)
+              // This creates the curl/wave appearance
+              const stripDelay = goingForward ? i / this.numStrips : (this.numStrips - 1 - i) / this.numStrips;
+              const stripProgress = Math.max(0, Math.min(1, (progress - stripDelay * 0.4) / 0.6));
+
+              if (stripProgress > 0) {
+                strip.classList.add('curling');
+
+                // Calculate rotation with easing
+                const easedProgress = this.easeInOutQuad(stripProgress);
+                const maxRotation = 180;
+                const rotation = easedProgress * maxRotation;
+
+                // Add slight Z translation for depth during curl
+                const zOffset = Math.sin(easedProgress * Math.PI) * 50;
+
+                // Add slight vertical movement for realism (page lifts in middle)
+                const yOffset = Math.sin(easedProgress * Math.PI) * -15;
+
+                // Calculate X translation to keep the page edge anchored
+                const stripWidth = this.pageWidth / this.numStrips;
+                let xOffset = 0;
+
+                if (goingForward) {
+                  // Forward turn - page moves left
+                  xOffset = -easedProgress * stripWidth * 2 * (i / this.numStrips);
+                } else {
+                  // Backward turn - page moves right
+                  xOffset = easedProgress * stripWidth * 2 * ((this.numStrips - 1 - i) / this.numStrips);
+                }
+
+                // Calculate shadow intensity based on curl position
+                const shadowIntensity = Math.sin(easedProgress * Math.PI) * 0.25;
+
+                // Apply transform with perspective
+                const rotateDir = goingForward ? -1 : 1;
+                strip.style.transform = `
+                  perspective(1200px)
+                  translateX(${xOffset}px)
+                  translateY(${yOffset}px)
+                  translateZ(${zOffset}px)
+                  rotateY(${rotation * rotateDir}deg)
+                `;
+
+                // Dynamic shadow based on curl angle
+                strip.style.boxShadow = `
+                  ${shadowIntensity * 30 * rotateDir}px 0 ${20 + shadowIntensity * 20}px rgba(0,0,0,${0.1 + shadowIntensity * 0.2})
+                `;
+
+                // Brightness changes as page curves (inner curve is darker)
+                const brightness = 1 - shadowIntensity * 0.3;
+                strip.style.filter = `brightness(${brightness})`;
+
+                // Fade out at the end
+                if (easedProgress > 0.7) {
+                  strip.style.opacity = 1 - ((easedProgress - 0.7) / 0.3);
+                }
+              }
+            });
+
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            } else {
+              resolve();
+            }
+          };
+
+          requestAnimationFrame(animate);
+        });
+      }
+
+      // Animate page turn to a specific page with paper curl effect
       async turnToPage(targetPage, animate = true) {
         if (targetPage < 1 || targetPage > this.totalPages || targetPage === this.currentPage) return;
         if (this.isAnimating) return;
@@ -606,21 +781,26 @@
         await this.renderPage(targetPage, this.canvasNext);
 
         if (animate) {
-          // Apply animation classes
-          if (goingForward) {
-            this.pageCurrent.classList.add('turning-out');
-            this.pageNext.classList.add('turning-in');
-          } else {
-            this.pageCurrent.classList.add('turning-back-out');
-            this.pageNext.classList.add('turning-back-in');
-          }
+          // Create curl strips from current page
+          this.createCurlStrips(this.canvasCurrent, goingForward);
+          this.curlContainer.classList.add('active');
 
-          // Wait for animation to complete (0.9s animation)
-          await new Promise(resolve => setTimeout(resolve, 900));
+          // Hide the original current page (curl strips will show instead)
+          this.pageCurrent.style.opacity = '0';
+
+          // Start revealing next page with animation
+          this.pageNext.classList.add(goingForward ? 'turning-in' : 'turning-back-in');
+
+          // Animate the paper curl
+          await this.animateCurl(goingForward);
+
+          // Clean up curl animation
+          this.curlContainer.classList.remove('active');
+          this.curlContainer.innerHTML = '';
 
           // Remove animation classes
-          this.pageCurrent.classList.remove('turning-out', 'turning-back-out');
           this.pageNext.classList.remove('turning-in', 'turning-back-in');
+          this.pageCurrent.style.opacity = '1';
         }
 
         // Swap canvases - copy next to current
