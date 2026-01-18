@@ -3,402 +3,2411 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Linton Evans - Technical Specialist | Interactive 3D Portfolio">
-  <meta name="author" content="Linton Evans">
   <title>Linton Evans | Technical Specialist - 3D Portfolio</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Inter', sans-serif; background: #000; color: #fff; }
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #0a0a0f;
-      color: #ffffff;
-    }
-
-    #app {
-      width: 100%;
-      height: 100%;
-      position: relative;
+    /* Neural Network Background - ALWAYS visible */
+    #neural-bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 0;
+      background: #0a0a15;
     }
 
     #canvas-container {
-      width: 100%;
-      height: 100%;
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-
-    canvas {
-      display: block;
-    }
-
-    /* Loading Screen */
-    #loading-screen {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      transition: opacity 0.8s ease, visibility 0.8s ease;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 1;
     }
 
-    #loading-screen.hidden {
-      opacity: 0;
-      visibility: hidden;
+    #loading-screen {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: transparent;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 1000; transition: opacity 0.8s ease;
     }
+    #loading-screen.hidden { opacity: 0; pointer-events: none; }
 
     .loading-box {
-      width: 80px;
-      height: 80px;
-      position: relative;
-      transform-style: preserve-3d;
-      animation: rotateBox 2s ease-in-out infinite;
+      width: 80px; height: 80px; position: relative;
+      transform-style: preserve-3d; animation: rotateBox 2s ease-in-out infinite;
     }
-
     .loading-box::before {
-      content: '';
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #a3e635 0%, #65a30d 100%);
-      border-radius: 8px;
-      animation: pulse 1s ease-in-out infinite alternate;
+      content: ''; position: absolute; width: 100%; height: 100%;
+      background: linear-gradient(135deg, #a3e635, #65a30d);
+      border-radius: 8px; animation: pulse 1s ease-in-out infinite alternate;
+    }
+    @keyframes rotateBox { 0%,100%{transform:rotateY(0deg)} 50%{transform:rotateY(180deg)} }
+    @keyframes pulse { from{box-shadow:0 0 20px rgba(163,230,53,0.4)} to{box-shadow:0 0 40px rgba(163,230,53,0.8)} }
+    .loading-text { margin-top: 30px; font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; color: #a3e635; letter-spacing: 2px; }
+    .loading-progress { margin-top: 20px; width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+    .loading-progress-bar { height: 100%; background: linear-gradient(90deg, #a3e635, #65a30d); width: 0%; transition: width 0.3s; }
+
+    #ui-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 200; }
+    #ui-overlay > * { pointer-events: auto; }
+
+    #start-btn {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      padding: 18px 50px; font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.1rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+      background: linear-gradient(135deg, #a3e635, #65a30d);
+      color: #0a0a0f; border: none; border-radius: 50px; cursor: pointer;
+      box-shadow: 0 0 30px rgba(163, 230, 53, 0.4); display: none; z-index: 200;
+    }
+    #start-btn:hover { transform: translate(-50%, -50%) scale(1.05); box-shadow: 0 0 50px rgba(163, 230, 53, 0.6); }
+    #start-btn.visible { display: block; animation: fadeIn 0.5s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translate(-50%,-40%)} to{opacity:1;transform:translate(-50%,-50%)} }
+
+    .nav-container {
+      position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+      display: none; gap: 12px; background: rgba(10, 10, 15, 0.8);
+      backdrop-filter: blur(20px); padding: 12px 20px; border-radius: 50px;
+      border: 1px solid rgba(163, 230, 53, 0.2);
+      z-index: 50;
+    }
+    /* Hide section nav when booklet is visible */
+    #pdf-booklet.visible ~ #ui-overlay .nav-container { display: none !important; }
+    .nav-btn { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.3); border: none; cursor: pointer; }
+    .nav-btn:hover { background: rgba(163, 230, 53, 0.6); transform: scale(1.2); }
+    .nav-btn.active { background: #a3e635; box-shadow: 0 0 15px rgba(163, 230, 53, 0.6); }
+
+    .audio-controls { position: absolute; top: 30px; right: 30px; display: flex; gap: 10px; }
+    .audio-btn {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(10, 10, 15, 0.8); backdrop-filter: blur(20px);
+      border: 1px solid rgba(163, 230, 53, 0.3); color: #fff;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .audio-btn:hover { border-color: #a3e635; background: rgba(163, 230, 53, 0.1); }
+    .audio-btn svg { width: 20px; height: 20px; }
+
+    .info-panel {
+      position: absolute; max-width: 320px; z-index: 500;
+      background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(20px);
+      padding: 25px; border-radius: 16px; border: 1px solid rgba(163, 230, 53, 0.2);
+      opacity: 0; transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    .info-panel.visible { opacity: 1; }
+    /* Position variants for info panel */
+    .info-panel.pos-top-left { top: 30px; left: 30px; transform: translate(-20px, 0); }
+    .info-panel.pos-top-left.visible { transform: translate(0, 0); }
+    .info-panel.pos-top-right { top: 30px; right: 30px; left: auto; transform: translate(20px, 0); }
+    .info-panel.pos-top-right.visible { transform: translate(0, 0); }
+    .info-panel.pos-bottom-left { bottom: 140px; top: auto; left: 30px; transform: translate(-20px, 0); }
+    .info-panel.pos-bottom-left.visible { transform: translate(0, 0); }
+    .info-panel.pos-bottom-right { bottom: 140px; top: auto; right: 30px; left: auto; transform: translate(20px, 0); }
+    .info-panel.pos-bottom-right.visible { transform: translate(0, 0); }
+    .info-panel h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 8px; color: #a3e635; }
+    .info-panel h3 { font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-bottom: 15px; }
+    .info-panel p { font-size: 0.85rem; line-height: 1.5; color: rgba(255,255,255,0.85); white-space: pre-line; }
+
+    .speech-bubble {
+      position: absolute; max-width: 340px; z-index: 500;
+      background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(20px);
+      padding: 16px 22px; border-radius: 18px; border: 1px solid rgba(163, 230, 53, 0.3);
+      opacity: 0;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(163, 230, 53, 0.1);
+    }
+    .speech-bubble::before {
+      content: ''; position: absolute; width: 0; height: 0;
+      border: 10px solid transparent;
     }
 
-    @keyframes rotateBox {
-      0%, 100% { transform: rotateY(0deg) rotateX(0deg); }
-      25% { transform: rotateY(90deg) rotateX(10deg); }
-      50% { transform: rotateY(180deg) rotateX(0deg); }
-      75% { transform: rotateY(270deg) rotateX(-10deg); }
+    /* Different entrance animations */
+    @keyframes bubbleFadeIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+    @keyframes bubbleSlideLeft { from { opacity: 0; transform: translateX(-50px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes bubbleSlideRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes bubbleSlideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes bubbleSlideDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes bubblePop { from { opacity: 0; transform: scale(0.3); } 50% { transform: scale(1.1); } to { opacity: 1; transform: scale(1); } }
+    @keyframes bubbleSwing { from { opacity: 0; transform: rotate(-10deg) scale(0.8); } to { opacity: 1; transform: rotate(0deg) scale(1); } }
+
+    .speech-bubble.visible { opacity: 1; }
+    .speech-bubble.anim-fade.visible { animation: bubbleFadeIn 0.5s ease-out forwards; }
+    .speech-bubble.anim-slide-left.visible { animation: bubbleSlideLeft 0.5s ease-out forwards; }
+    .speech-bubble.anim-slide-right.visible { animation: bubbleSlideRight 0.5s ease-out forwards; }
+    .speech-bubble.anim-slide-up.visible { animation: bubbleSlideUp 0.5s ease-out forwards; }
+    .speech-bubble.anim-slide-down.visible { animation: bubbleSlideDown 0.5s ease-out forwards; }
+    .speech-bubble.anim-pop.visible { animation: bubblePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+    .speech-bubble.anim-swing.visible { animation: bubbleSwing 0.5s ease-out forwards; }
+
+    /* Position variants for speech bubble */
+    /* TOP LEFT - upper left corner */
+    .speech-bubble.pos-top-left { top: 20px; left: 20px; max-width: 280px; transform: translate(-20px, -20px) scale(0.9); }
+    .speech-bubble.pos-top-left.visible { transform: translate(0, 0) scale(1); }
+    .speech-bubble.pos-top-left::before { bottom: -20px; left: 30px; border-top-color: rgba(163, 230, 53, 0.3); }
+
+    /* BOTTOM LEFT - lower left corner */
+    .speech-bubble.pos-bottom-left { bottom: 120px; top: auto; left: 20px; max-width: 280px; transform: translate(-20px, 20px) scale(0.9); }
+    .speech-bubble.pos-bottom-left.visible { transform: translate(0, 0) scale(1); }
+    .speech-bubble.pos-bottom-left::before { top: -20px; left: 30px; border-bottom-color: rgba(163, 230, 53, 0.3); }
+
+    /* MID LEFT - vertically centered on left, pointer points right */
+    .speech-bubble.pos-mid-left { top: 50%; left: 20px; max-width: 280px; transform: translate(-20px, -50%) scale(0.9); }
+    .speech-bubble.pos-mid-left.visible { transform: translate(0, -50%) scale(1); }
+    .speech-bubble.pos-mid-left::before { right: -20px; top: 50%; margin-top: -10px; border-left-color: rgba(163, 230, 53, 0.3); }
+
+    /* TOP RIGHT - upper right corner */
+    .speech-bubble.pos-top-right { top: 20px; right: 20px; left: auto; max-width: 280px; transform: translate(20px, -20px) scale(0.9); }
+    .speech-bubble.pos-top-right.visible { transform: translate(0, 0) scale(1); }
+    .speech-bubble.pos-top-right::before { bottom: -20px; right: 30px; border-top-color: rgba(163, 230, 53, 0.3); }
+
+    /* BOTTOM RIGHT - lower right corner */
+    .speech-bubble.pos-bottom-right { bottom: 120px; top: auto; right: 20px; left: auto; max-width: 280px; transform: translate(20px, 20px) scale(0.9); }
+    .speech-bubble.pos-bottom-right.visible { transform: translate(0, 0) scale(1); }
+    .speech-bubble.pos-bottom-right::before { top: -20px; right: 30px; border-bottom-color: rgba(163, 230, 53, 0.3); }
+
+    /* CENTER - below content */
+    .speech-bubble.pos-center { bottom: 90px; left: 50%; max-width: 500px; transform: translateX(-50%) translateY(20px) scale(0.9); }
+    .speech-bubble.pos-center.visible { transform: translateX(-50%) translateY(0) scale(1); }
+    .speech-bubble.pos-center::before { display: none; }
+    .speech-bubble.pos-center p { text-align: center; }
+
+    /* Dynamic positioned bubbles */
+    .speech-bubble.pos-dynamic { max-width: 300px; transform: scale(0.9); }
+    .speech-bubble.pos-dynamic.visible { transform: scale(1); }
+    .speech-bubble.pos-dynamic::before { display: none; }
+
+    .speech-bubble p { font-size: 0.9rem; line-height: 1.5; text-align: left; }
+
+    /* Bubble adjusts when page is zoomed */
+    .booklet-container.zoomed ~ #ui-overlay .speech-bubble:not(.pos-center),
+    .booklet-container.zoomed-max ~ #ui-overlay .speech-bubble:not(.pos-center) {
+      max-width: 240px;
+      font-size: 0.85rem;
+    }
+    .speech-bubble .section-icon { display: inline-block; margin-right: 8px; color: #a3e635; }
+
+    #pdf-booklet {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.3) rotateY(90deg);
+      display: none; z-index: 150; perspective: 2000px;
+      opacity: 0;
+      transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s ease;
+    }
+    #pdf-booklet.visible {
+      display: block;
+      transform: translate(-50%, -50%) scale(1) rotateY(0deg);
+      opacity: 1;
+    }
+    .booklet-container {
+      position: relative;
+      width: 450px; height: 620px;
+      transform-style: preserve-3d;
+      transform: scale(1.25);
+      transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .booklet-container.zoomed { transform: scale(1.5) translateY(var(--scroll-offset, 0px)); }
+    .booklet-container.zoomed-max { transform: scale(1.9) translateY(var(--scroll-offset, 0px)); }
+
+    /* Let's Go popup */
+    #lets-go-popup {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 3rem;
+      font-weight: 700;
+      color: #a3e635;
+      text-shadow: 0 0 30px rgba(163, 230, 53, 0.8), 0 0 60px rgba(163, 230, 53, 0.4);
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #lets-go-popup.visible {
+      animation: letsGoAnim 2s ease-out forwards;
+    }
+    @keyframes letsGoAnim {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0) rotate(-10deg); }
+      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.3) rotate(5deg); }
+      40% { transform: translate(-50%, -50%) scale(1) rotate(-3deg); }
+      60% { transform: translate(-50%, -50%) scale(1.1) rotate(2deg); }
+      80% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+      100% { opacity: 0; transform: translate(-50%, -80%) scale(0.8) rotate(0deg); }
     }
 
-    @keyframes pulse {
-      from { box-shadow: 0 0 20px rgba(163, 230, 53, 0.4); }
-      to { box-shadow: 0 0 40px rgba(163, 230, 53, 0.8); }
-    }
-
-    .loading-text {
-      margin-top: 30px;
+    /* Connect Now button */
+    #connect-now-btn {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      padding: 18px 45px;
       font-family: 'Space Grotesk', sans-serif;
       font-size: 1.2rem;
-      font-weight: 500;
-      color: #a3e635;
-      letter-spacing: 2px;
-    }
-
-    .loading-progress {
-      margin-top: 20px;
-      width: 200px;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .loading-progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, #a3e635, #65a30d);
-      width: 0%;
-      transition: width 0.3s ease;
-    }
-
-    /* UI Overlay */
-    #ui-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 100;
-    }
-
-    #ui-overlay > * {
-      pointer-events: auto;
-    }
-
-    /* Navigation */
-    .nav-container {
-      position: absolute;
-      bottom: 40px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 12px;
-      background: rgba(10, 10, 15, 0.8);
-      backdrop-filter: blur(20px);
-      padding: 12px 20px;
-      border-radius: 50px;
-      border: 1px solid rgba(163, 230, 53, 0.2);
-    }
-
-    .nav-btn {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.3);
-      border: none;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .nav-btn:hover {
-      background: rgba(163, 230, 53, 0.6);
-      transform: scale(1.2);
-    }
-
-    .nav-btn.active {
-      background: #a3e635;
-      box-shadow: 0 0 15px rgba(163, 230, 53, 0.6);
-    }
-
-    /* Audio Controls */
-    .audio-controls {
-      position: absolute;
-      top: 30px;
-      right: 30px;
-      display: flex;
-      gap: 10px;
-    }
-
-    .audio-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: rgba(10, 10, 15, 0.8);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(163, 230, 53, 0.3);
-      color: #fff;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.3s ease;
-    }
-
-    .audio-btn:hover {
-      border-color: #a3e635;
-      background: rgba(163, 230, 53, 0.1);
-    }
-
-    .audio-btn svg {
-      width: 20px;
-      height: 20px;
-    }
-
-    /* Start Button */
-    #start-btn {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      padding: 18px 50px;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 1.1rem;
       font-weight: 600;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      background: linear-gradient(135deg, #a3e635 0%, #65a30d 100%);
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, #a3e635, #65a30d);
       color: #0a0a0f;
       border: none;
       border-radius: 50px;
       cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 0 30px rgba(163, 230, 53, 0.4);
-      display: none;
-    }
-
-    #start-btn:hover {
-      transform: translate(-50%, -50%) scale(1.05);
-      box-shadow: 0 0 50px rgba(163, 230, 53, 0.6);
-    }
-
-    #start-btn.visible {
-      display: block;
-      animation: fadeIn 0.5s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translate(-50%, -40%); }
-      to { opacity: 1; transform: translate(-50%, -50%); }
-    }
-
-    /* Info Panel */
-    .info-panel {
-      position: absolute;
-      top: 30px;
-      left: 30px;
-      max-width: 350px;
-      background: rgba(10, 10, 15, 0.85);
-      backdrop-filter: blur(20px);
-      padding: 25px;
-      border-radius: 16px;
-      border: 1px solid rgba(163, 230, 53, 0.2);
+      z-index: 1001;
       opacity: 0;
-      transform: translateX(-20px);
-      transition: all 0.5s ease;
+      pointer-events: none;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 0 30px rgba(163, 230, 53, 0.4), 0 10px 40px rgba(0,0,0,0.3);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    #connect-now-btn:hover {
+      box-shadow: 0 0 50px rgba(163, 230, 53, 0.6), 0 15px 50px rgba(0,0,0,0.4);
+      transform: translate(-50%, -50%) scale(1.05);
+    }
+    #connect-now-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+      animation: connectBtnAnim 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    #connect-now-btn svg {
+      width: 22px;
+      height: 22px;
+    }
+    @keyframes connectBtnAnim {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+      100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     }
 
-    .info-panel.visible {
+    /* Persistent contact bubble */
+    #contact-persistent {
+      position: fixed;
+      top: 100px;
+      right: 30px;
+      background: rgba(10, 10, 15, 0.95);
+      backdrop-filter: blur(20px);
+      padding: 20px 25px;
+      border-radius: 16px;
+      border: 1px solid rgba(163, 230, 53, 0.3);
+      z-index: 900;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(30px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(163, 230, 53, 0.1);
+    }
+    #contact-persistent.visible {
       opacity: 1;
+      pointer-events: auto;
       transform: translateX(0);
     }
-
-    .info-panel h2 {
+    #contact-persistent h4 {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 1.5rem;
-      font-weight: 700;
+      font-size: 1rem;
+      color: #a3e635;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #contact-persistent h4 svg {
+      width: 18px;
+      height: 18px;
+    }
+    #contact-persistent .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       margin-bottom: 8px;
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.9);
+    }
+    #contact-persistent .contact-item:last-child {
+      margin-bottom: 0;
+    }
+    #contact-persistent .contact-item svg {
+      width: 16px;
+      height: 16px;
+      color: #a3e635;
+      flex-shrink: 0;
+    }
+    #contact-persistent a {
+      color: rgba(255,255,255,0.9);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    #contact-persistent a:hover {
       color: #a3e635;
     }
 
-    .info-panel h3 {
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.7);
-      margin-bottom: 15px;
+    /* Single page view - main page container */
+    .page-stack {
+      position: relative;
+      width: 100%; height: 580px;
+      transform-style: preserve-3d;
     }
 
-    .info-panel p {
-      font-size: 0.9rem;
-      line-height: 1.6;
-      color: rgba(255, 255, 255, 0.85);
-    }
-
-    /* Speech Bubble */
-    .speech-bubble {
+    /* Individual page styling */
+    .pdf-page {
       position: absolute;
-      bottom: 120px;
-      left: 50%;
+      width: 430px; height: 580px;
+      left: 50%; top: 0;
       transform: translateX(-50%);
-      max-width: 600px;
-      background: rgba(10, 10, 15, 0.9);
-      backdrop-filter: blur(20px);
-      padding: 20px 30px;
-      border-radius: 20px;
-      border: 1px solid rgba(163, 230, 53, 0.3);
-      opacity: 0;
-      transition: all 0.4s ease;
+      background: #fff; border-radius: 8px;
+      box-shadow: 0 15px 50px rgba(0,0,0,0.6), 0 5px 15px rgba(0,0,0,0.3);
+      overflow: hidden; cursor: zoom-in;
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
     }
+    .pdf-page:hover { box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 8px 20px rgba(0,0,0,0.4); }
+    .booklet-container.zoomed .pdf-page, .booklet-container.zoomed-max .pdf-page { cursor: zoom-out; }
+    .pdf-page canvas { width: 100%; height: 100%; object-fit: contain; }
 
-    .speech-bubble.visible {
+    /* Current page - visible */
+    .pdf-page.current {
+      z-index: 10;
+      transform: translateX(-50%);
       opacity: 1;
     }
 
-    .speech-bubble p {
-      font-size: 1rem;
-      line-height: 1.6;
-      text-align: center;
+    /* Next page - hidden underneath */
+    .pdf-page.next {
+      z-index: 5;
+      transform: translateX(-50%);
+      opacity: 0;
     }
 
-    .speech-bubble::after {
+    /* ============================================
+       PAPER CURL PAGE TURN SYSTEM
+       Corner peel effect - curls from top-right
+       ============================================ */
+
+    /* Curl container that holds the curling page */
+    .page-curl-container {
+      position: absolute;
+      width: 430px; height: 580px;
+      left: 50%; top: 0;
+      transform: translateX(-50%);
+      transform-style: preserve-3d;
+      perspective: 1200px;
+      z-index: 20;
+      pointer-events: none;
+      opacity: 0;
+      overflow: visible;
+    }
+
+    .page-curl-container.active {
+      opacity: 1;
+    }
+
+    /* The curling page element */
+    .curl-page {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transform-origin: bottom left;
+      will-change: transform, opacity;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+    }
+
+    .curl-page canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Shadow that appears under the curling page */
+    .curl-shadow {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(
+        ellipse at top right,
+        rgba(0,0,0,0.4) 0%,
+        rgba(0,0,0,0.2) 30%,
+        rgba(0,0,0,0) 70%
+      );
+      opacity: 0;
+      pointer-events: none;
+      border-radius: 8px;
+    }
+
+    /* Gradient overlay on curling page for depth */
+    .curl-gradient {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(
+        -45deg,
+        rgba(0,0,0,0.15) 0%,
+        rgba(0,0,0,0.05) 30%,
+        rgba(255,255,255,0.05) 50%,
+        rgba(0,0,0,0) 100%
+      );
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      border-radius: 8px;
+    }
+
+    /* Page turn animations for underlying page */
+    .pdf-page.turning-out {
+      opacity: 0;
+      z-index: 5;
+    }
+    .pdf-page.turning-in {
+      animation: pageRevealSmooth 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      z-index: 10;
+    }
+
+    /* Backward page turn */
+    .pdf-page.turning-back-out {
+      opacity: 0;
+      z-index: 5;
+    }
+    .pdf-page.turning-back-in {
+      animation: pageRevealSmooth 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      z-index: 10;
+    }
+
+    /* New page smoothly revealed underneath */
+    @keyframes pageRevealSmooth {
+      0% {
+        transform: translateX(-50%) scale(0.97);
+        opacity: 0.3;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+      }
+      40% {
+        transform: translateX(-50%) scale(0.99);
+        opacity: 0.7;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      }
+      100% {
+        transform: translateX(-50%) scale(1);
+        opacity: 1;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+      }
+    }
+
+    /* Page shadow/depth stack effect */
+    .page-stack::before {
       content: '';
       position: absolute;
-      bottom: -10px;
-      left: 50%;
+      width: 428px; height: 578px;
+      left: 50%; top: 2px;
       transform: translateX(-50%);
-      border-left: 10px solid transparent;
-      border-right: 10px solid transparent;
-      border-top: 10px solid rgba(10, 10, 15, 0.9);
+      background: #f5f5f5;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      z-index: 1;
+    }
+    .page-stack::after {
+      content: '';
+      position: absolute;
+      width: 426px; height: 576px;
+      left: 50%; top: 4px;
+      transform: translateX(-50%);
+      background: #eee;
+      border-radius: 8px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+      z-index: 0;
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-      .info-panel {
-        top: auto;
-        bottom: 100px;
-        left: 20px;
-        right: 20px;
-        max-width: none;
-      }
+    /* Hide spine in single page mode */
+    .booklet-spine { display: none; }
 
-      .nav-container {
-        bottom: 20px;
-      }
+    .booklet-nav { position: absolute; bottom: -85px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 15px; background: rgba(10,10,15,0.9); padding: 14px 28px; border-radius: 35px; border: 1px solid rgba(163,230,53,0.3); }
+    .booklet-nav button { width: 40px; height: 40px; border-radius: 50%; background: rgba(163,230,53,0.2); border: 1px solid rgba(163,230,53,0.4); color: #a3e635; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
+    .booklet-nav button:hover:not(:disabled) { background: rgba(163,230,53,0.4); transform: scale(1.1); }
+    .booklet-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+    .booklet-nav button svg { width: 20px; height: 20px; }
+    .page-indicator { font-family: 'Space Grotesk', sans-serif; font-size: 0.9rem; color: #fff; min-width: 80px; text-align: center; }
+    .booklet-close { position: absolute; top: -50px; right: 10px; width: 40px; height: 40px; border-radius: 50%; background: rgba(10,10,15,0.9); border: 1px solid rgba(255,255,255,0.2); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
+    .booklet-close:hover { background: rgba(255,100,100,0.3); transform: scale(1.1); }
+    #zoom-btn { background: rgba(74,144,217,0.2); border-color: rgba(74,144,217,0.4); color: #4a90d9; }
+    #zoom-btn.active { background: rgba(74,144,217,0.5); }
 
-      .audio-controls {
-        top: 20px;
-        right: 20px;
-      }
-    }
+    #view-cv-btn { position: absolute; top: 30px; left: 50%; transform: translateX(-50%); padding: 10px 24px; font-family: 'Space Grotesk', sans-serif; font-size: 0.9rem; background: rgba(10,10,15,0.8); backdrop-filter: blur(20px); border: 1px solid rgba(163,230,53,0.4); color: #a3e635; border-radius: 25px; cursor: pointer; display: none; }
+    #view-cv-btn.visible { display: block; }
+    #view-cv-btn:hover { background: rgba(163,230,53,0.2); }
   </style>
 </head>
 <body>
-  <div id="app">
-    <!-- Loading Screen -->
-    <div id="loading-screen">
-      <div class="loading-box"></div>
-      <div class="loading-text">LOADING PORTFOLIO</div>
-      <div class="loading-progress">
-        <div class="loading-progress-bar" id="progress-bar"></div>
-      </div>
+  <canvas id="neural-bg"></canvas>
+  <div id="canvas-container"></div>
+
+  <div id="loading-screen">
+    <div class="loading-box"></div>
+    <div class="loading-text">LOADING PORTFOLIO</div>
+    <div class="loading-progress"><div class="loading-progress-bar" id="progress-bar"></div></div>
+  </div>
+
+  <div id="lets-go-popup">Let's Go! 🚀</div>
+
+  <a id="connect-now-btn" href="mailto:linton.evans@outlook.com?subject=Let's%20Connect%20-%20From%20Your%20Portfolio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+      <polyline points="22,6 12,13 2,6"></polyline>
+    </svg>
+    Connect Now
+  </a>
+
+  <div id="contact-persistent">
+    <h4>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+      </svg>
+      Get In Touch
+    </h4>
+    <div class="contact-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+        <polyline points="22,6 12,13 2,6"></polyline>
+      </svg>
+      <a href="mailto:linton.evans@outlook.com">linton.evans@outlook.com</a>
     </div>
-
-    <!-- 3D Canvas -->
-    <div id="canvas-container"></div>
-
-    <!-- UI Overlay -->
-    <div id="ui-overlay">
-      <!-- Start Button -->
-      <button id="start-btn">Open My CV</button>
-
-      <!-- Audio Controls -->
-      <div class="audio-controls">
-        <button class="audio-btn" id="mute-btn" title="Toggle Audio">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-          </svg>
-        </button>
-        <button class="audio-btn" id="skip-btn" title="Skip">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="5 4 15 12 5 20 5 4"></polygon>
-            <line x1="19" y1="5" x2="19" y2="19"></line>
-          </svg>
-        </button>
-      </div>
-
-      <!-- Info Panel -->
-      <div class="info-panel" id="info-panel">
-        <h2 id="panel-title"></h2>
-        <h3 id="panel-subtitle"></h3>
-        <p id="panel-content"></p>
-      </div>
-
-      <!-- Navigation -->
-      <div class="nav-container" id="nav-container" style="display: none;">
-        <button class="nav-btn active" data-section="0" title="Welcome"></button>
-        <button class="nav-btn" data-section="1" title="About"></button>
-        <button class="nav-btn" data-section="2" title="Experience"></button>
-        <button class="nav-btn" data-section="3" title="Skills"></button>
-        <button class="nav-btn" data-section="4" title="Education"></button>
-        <button class="nav-btn" data-section="5" title="Contact"></button>
-      </div>
-
-      <!-- Speech Bubble -->
-      <div class="speech-bubble" id="speech-bubble">
-        <p id="speech-text"></p>
-      </div>
+    <div class="contact-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+      </svg>
+      <a href="tel:+64-21-939-505">+64-21-939-505</a>
     </div>
   </div>
 
-  <script type="module" src="/src/main.js"></script>
+  <div id="pdf-booklet">
+    <div class="booklet-container">
+      <div class="page-stack">
+        <div class="pdf-page current" id="page-current"><canvas id="canvas-current"></canvas></div>
+        <div class="pdf-page next" id="page-next"><canvas id="canvas-next"></canvas></div>
+        <div class="page-curl-container" id="curl-container"></div>
+      </div>
+    </div>
+    <button class="booklet-close" id="close-booklet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+    <div class="booklet-nav">
+      <button id="prev-page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+      <span class="page-indicator" id="page-indicator">1 / 4</span>
+      <button id="next-page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+      <button id="zoom-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg></button>
+    </div>
+  </div>
+
+  <div id="ui-overlay">
+    <button id="start-btn">Open My CV</button>
+    <button id="view-cv-btn">View Full CV</button>
+    <div class="audio-controls">
+      <button class="audio-btn" id="skip-btn" title="Skip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="5 4 15 12 5 20 5 4"></polygon>
+          <line x1="19" y1="5" x2="19" y2="19"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="info-panel pos-top-left" id="info-panel">
+      <h2 id="panel-title"></h2>
+      <h3 id="panel-subtitle"></h3>
+      <p id="panel-content"></p>
+    </div>
+    <div class="nav-container" id="nav-container">
+      <button class="nav-btn active" data-section="0"></button>
+      <button class="nav-btn" data-section="1"></button>
+      <button class="nav-btn" data-section="2"></button>
+      <button class="nav-btn" data-section="3"></button>
+      <button class="nav-btn" data-section="4"></button>
+      <button class="nav-btn" data-section="5"></button>
+    </div>
+    <div class="speech-bubble pos-top-right" id="speech-bubble"><p id="speech-text"></p></div>
+
+  </div>
+
+  <!-- Neural Network Background Script - Runs First -->
+  <script>
+    (function() {
+      const canvas = document.getElementById('neural-bg');
+      const ctx = canvas.getContext('2d');
+      const nodes = [];
+      const connections = [];
+      let width, height, time = 0;
+
+      function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        initNodes();
+      }
+
+      function initNodes() {
+        nodes.length = 0;
+        connections.length = 0;
+        const count = Math.floor((width * height) / 15000);
+
+        for (let i = 0; i < count; i++) {
+          nodes.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.5,
+            radius: Math.random() * 2 + 1,
+            pulse: Math.random() * Math.PI * 2
+          });
+        }
+      }
+
+      function draw() {
+        time += 0.01;
+
+        // Dark gradient background
+        const grad = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, Math.max(width, height) * 0.8);
+        grad.addColorStop(0, '#0f0f1a');
+        grad.addColorStop(1, '#050508');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, width, height);
+
+        // Update and draw nodes
+        nodes.forEach((node, i) => {
+          // Move
+          node.x += node.vx;
+          node.y += node.vy;
+
+          // Bounce
+          if (node.x < 0 || node.x > width) node.vx *= -1;
+          if (node.y < 0 || node.y > height) node.vy *= -1;
+
+          // Keep in bounds
+          node.x = Math.max(0, Math.min(width, node.x));
+          node.y = Math.max(0, Math.min(height, node.y));
+
+          // Draw connections to nearby nodes
+          for (let j = i + 1; j < nodes.length; j++) {
+            const other = nodes[j];
+            const dx = other.x - node.x;
+            const dy = other.y - node.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 150) {
+              const alpha = (1 - dist / 150) * 0.3;
+              ctx.beginPath();
+              ctx.moveTo(node.x, node.y);
+              ctx.lineTo(other.x, other.y);
+              ctx.strokeStyle = `rgba(163, 230, 53, ${alpha})`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+
+          // Draw node with pulse
+          const pulse = Math.sin(time * 2 + node.pulse) * 0.5 + 0.5;
+          const glowRadius = node.radius * (2 + pulse);
+
+          // Glow
+          const nodeGrad = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, glowRadius * 3);
+          nodeGrad.addColorStop(0, `rgba(163, 230, 53, ${0.3 + pulse * 0.2})`);
+          nodeGrad.addColorStop(1, 'rgba(163, 230, 53, 0)');
+          ctx.fillStyle = nodeGrad;
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, glowRadius * 3, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Core
+          ctx.fillStyle = `rgba(163, 230, 53, ${0.6 + pulse * 0.4})`;
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        requestAnimationFrame(draw);
+      }
+
+      resize();
+      window.addEventListener('resize', resize);
+      draw();
+    })();
+  </script>
+
+  <script type="importmap">
+    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+    // CV Data
+    const cvData = {
+      personal: { name: "Linton Evans", title: "Technical Specialist", email: "linton.evans@outlook.com", phone: "+64-21-939-505", location: "Auckland, New Zealand", noticePeriod: "1-2 Weeks" },
+      shortSummary: "Technical Specialist with 17+ years bridging deep technical expertise with practical business execution.",
+      experience: [
+        { title: "Owner / Operator", company: "E & E Traders Limited", period: "2019 - Present" },
+        { title: "Product Architect - UC", company: "Spark New Zealand", period: "2014 - 2020" },
+        { title: "UC Manager", company: "Pure IP Limited", period: "2014" },
+        { title: "APAC IT Network Manager", company: "Zeacom / Enghouse", period: "2011 - 2014" }
+      ],
+      skills: { technical: ["JavaScript", "Python", "REST APIs", "Three.js"], platforms: ["Microsoft Teams", "Azure", "AWS"], marketing: ["Google Ads", "GA4", "SEO"] },
+      education: [{ degree: "Bachelor of Computing Sciences", institution: "Unitec Institute of Technology" }],
+      speeches: {
+        welcome: [
+          "G'day! I'm Linton Evans, a Technical Specialist based in Auckland.",
+          "Welcome to my interactive portfolio - let me show you what I can do!"
+        ],
+        about: [
+          "17+ years bridging deep technical expertise with practical business execution.",
+          "Full-stack development: from frontend interfaces to backend APIs and databases.",
+          "Multi-platform integration specialist - connecting systems that don't want to talk.",
+          "Web development expert: modern JavaScript, responsive design, and performance optimization."
+        ],
+        experience: [
+          "Product Architect at Spark NZ - designed unified communications solutions at scale.",
+          "Built and operated my own e-commerce business with custom integrations.",
+          "APAC IT Network Manager - managed infrastructure across multiple countries.",
+          "Delivered enterprise solutions for Microsoft Teams, Azure, and cloud platforms."
+        ],
+        skills: [
+          "Full-stack app development: JavaScript, Python, Node.js, REST APIs.",
+          "Cloud architecture: Azure, AWS, serverless functions, and microservices.",
+          "API development & integration: connecting CRMs, ERPs, and third-party services.",
+          "E-commerce: BigCommerce, Shopify, store customizations, payment gateway integration, API-based inventory systems.",
+          "Data & analytics: GA4, Google Ads, SEO optimization, conversion tracking."
+        ],
+        education: [
+          "Bachelor of Computing Sciences - structured foundation in system networking and interop.",
+          "Microsoft certified: Teams, Azure, and cloud technologies.",
+          "Continuous learner: always exploring new frameworks and tools.",
+          "AI evangelist: fine-tuning LLMs, prompt engineering, and integrating AI into real-world workflows."
+        ],
+        contact: [
+          "Available with 1-2 weeks notice - ready for new challenges!",
+          "Let's connect: linton.evans@outlook.com or +64-21-939-505"
+        ]
+      }
+    };
+
+    // PDF Viewer - Single Page with Turn Animation
+    class PDFBooklet {
+      constructor() {
+        this.pdfDoc = null;
+        this.currentPage = 1;
+        this.totalPages = 0;
+        this.zoomLevel = 0;
+        this.isAnimating = false;
+        this.container = document.getElementById('pdf-booklet');
+        this.bookletContainer = this.container.querySelector('.booklet-container');
+        this.pageCurrent = document.getElementById('page-current');
+        this.pageNext = document.getElementById('page-next');
+        this.canvasCurrent = document.getElementById('canvas-current');
+        this.canvasNext = document.getElementById('canvas-next');
+        this.pageIndicator = document.getElementById('page-indicator');
+        this.curlContainer = document.getElementById('curl-container');
+
+        // Paper curl configuration
+        this.numStrips = 12; // Number of vertical strips for curl effect
+        this.pageWidth = 430;
+        this.pageHeight = 580;
+        this.animationDuration = 1400; // ms
+
+        // Scroll state for zoomed view
+        this.scrollOffset = 0;
+        this.scrollVelocity = 0;
+        this.maxScroll = 200;
+        this.isDragging = false;
+        this.lastTouchY = 0;
+
+        document.getElementById('prev-page').addEventListener('click', () => this.prevPage());
+        document.getElementById('next-page').addEventListener('click', () => this.nextPage());
+        document.getElementById('close-booklet').addEventListener('click', () => this.hide());
+        document.getElementById('view-cv-btn').addEventListener('click', () => this.show());
+        document.getElementById('zoom-btn').addEventListener('click', () => this.toggleZoom());
+        this.pageCurrent.addEventListener('click', () => this.toggleZoom());
+
+        // Setup scroll handlers
+        this.setupScrollHandlers();
+      }
+
+      setupScrollHandlers() {
+        // Mouse wheel scrolling
+        this.container.addEventListener('wheel', (e) => {
+          if (this.zoomLevel === 0) return;
+          e.preventDefault();
+          this.scrollOffset += e.deltaY * 0.5;
+          this.clampAndApplyScroll();
+        }, { passive: false });
+
+        // Touch scrolling
+        this.container.addEventListener('touchstart', (e) => {
+          if (this.zoomLevel === 0) return;
+          this.isDragging = true;
+          this.lastTouchY = e.touches[0].clientY;
+          this.scrollVelocity = 0;
+        });
+
+        this.container.addEventListener('touchmove', (e) => {
+          if (this.zoomLevel === 0 || !this.isDragging) return;
+          e.preventDefault();
+          const touchY = e.touches[0].clientY;
+          const delta = this.lastTouchY - touchY;
+          this.scrollVelocity = delta;
+          this.scrollOffset += delta;
+          this.lastTouchY = touchY;
+          this.applyScroll();
+        }, { passive: false });
+
+        this.container.addEventListener('touchend', () => {
+          this.isDragging = false;
+          this.animateBounceBack();
+        });
+
+        // Mouse drag scrolling
+        this.container.addEventListener('mousedown', (e) => {
+          if (this.zoomLevel === 0) return;
+          this.isDragging = true;
+          this.lastTouchY = e.clientY;
+          this.scrollVelocity = 0;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (this.zoomLevel === 0 || !this.isDragging) return;
+          const delta = this.lastTouchY - e.clientY;
+          this.scrollVelocity = delta;
+          this.scrollOffset += delta;
+          this.lastTouchY = e.clientY;
+          this.applyScroll();
+        });
+
+        window.addEventListener('mouseup', () => {
+          if (this.isDragging) {
+            this.isDragging = false;
+            this.animateBounceBack();
+          }
+        });
+      }
+
+      applyScroll() {
+        this.bookletContainer.style.setProperty('--scroll-offset', `${-this.scrollOffset}px`);
+      }
+
+      clampAndApplyScroll() {
+        // Allow some overscroll for bounce effect
+        const overscrollLimit = this.maxScroll * 1.3;
+        this.scrollOffset = Math.max(-overscrollLimit, Math.min(overscrollLimit, this.scrollOffset));
+        this.applyScroll();
+        this.animateBounceBack();
+      }
+
+      animateBounceBack() {
+        const animate = () => {
+          if (this.isDragging) return;
+
+          // Apply momentum
+          this.scrollOffset += this.scrollVelocity * 0.3;
+          this.scrollVelocity *= 0.92; // Friction
+
+          // Bounce back if beyond limits
+          if (this.scrollOffset > this.maxScroll) {
+            this.scrollOffset += (this.maxScroll - this.scrollOffset) * 0.15;
+            this.scrollVelocity *= 0.5;
+          } else if (this.scrollOffset < -this.maxScroll) {
+            this.scrollOffset += (-this.maxScroll - this.scrollOffset) * 0.15;
+            this.scrollVelocity *= 0.5;
+          }
+
+          this.applyScroll();
+
+          // Continue animation if still moving or bouncing
+          if (Math.abs(this.scrollVelocity) > 0.5 ||
+              Math.abs(this.scrollOffset) > this.maxScroll + 1) {
+            requestAnimationFrame(animate);
+          }
+        };
+        requestAnimationFrame(animate);
+      }
+
+      toggleZoom() {
+        this.zoomLevel = (this.zoomLevel + 1) % 3;
+        this.bookletContainer.classList.remove('zoomed', 'zoomed-max');
+        if (this.zoomLevel === 1) this.bookletContainer.classList.add('zoomed');
+        else if (this.zoomLevel === 2) this.bookletContainer.classList.add('zoomed-max');
+
+        // Reset scroll when changing zoom
+        if (this.zoomLevel === 0) {
+          this.scrollOffset = 0;
+          this.applyScroll();
+        }
+      }
+
+      async loadPDF(url) {
+        try {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          this.pdfDoc = await pdfjsLib.getDocument(url).promise;
+          this.totalPages = this.pdfDoc.numPages;
+          await this.renderPage(1, this.canvasCurrent);
+          this.updateIndicator();
+          return true;
+        } catch (e) { return false; }
+      }
+
+      async renderPage(pageNum, canvas) {
+        if (pageNum < 1 || pageNum > this.totalPages) {
+          const ctx = canvas.getContext('2d');
+          canvas.width = 430; canvas.height = 580;
+          ctx.fillStyle = '#f5f5f5';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          return;
+        }
+        const page = await this.pdfDoc.getPage(pageNum);
+        const vp = page.getViewport({ scale: 1 });
+        const scale = Math.min(430 / vp.width, 580 / vp.height) * 2;
+        const scaledVp = page.getViewport({ scale });
+        canvas.width = scaledVp.width;
+        canvas.height = scaledVp.height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport: scaledVp }).promise;
+      }
+
+      updateIndicator() {
+        this.pageIndicator.textContent = `${this.currentPage} / ${this.totalPages}`;
+        document.getElementById('prev-page').disabled = this.currentPage <= 1;
+        document.getElementById('next-page').disabled = this.currentPage >= this.totalPages;
+      }
+
+      // Create the curling page element from current page canvas
+      createCurlPage(sourceCanvas, goingForward) {
+        this.curlContainer.innerHTML = '';
+
+        // Create shadow element
+        const shadow = document.createElement('div');
+        shadow.className = 'curl-shadow';
+        this.curlContainer.appendChild(shadow);
+
+        // Create the page that will curl
+        const curlPage = document.createElement('div');
+        curlPage.className = 'curl-page';
+
+        // Set transform origin based on direction
+        if (goingForward) {
+          curlPage.style.transformOrigin = 'bottom left';
+        } else {
+          curlPage.style.transformOrigin = 'bottom right';
+        }
+
+        // Create canvas copy
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = sourceCanvas.width;
+        pageCanvas.height = sourceCanvas.height;
+        pageCanvas.getContext('2d').drawImage(sourceCanvas, 0, 0);
+
+        // Create gradient overlay for depth effect
+        const gradient = document.createElement('div');
+        gradient.className = 'curl-gradient';
+
+        curlPage.appendChild(pageCanvas);
+        curlPage.appendChild(gradient);
+        this.curlContainer.appendChild(curlPage);
+
+        return { curlPage, shadow, gradient };
+      }
+
+      // Smooth easing functions
+      easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+      }
+
+      easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      }
+
+      easeOutQuart(t) {
+        return 1 - Math.pow(1 - t, 4);
+      }
+
+      // Animate the corner peel page curl effect
+      async animateCurl(goingForward) {
+        const curlPage = this.curlContainer.querySelector('.curl-page');
+        const shadow = this.curlContainer.querySelector('.curl-shadow');
+        const gradient = this.curlContainer.querySelector('.curl-gradient');
+
+        if (!curlPage) return;
+
+        const startTime = performance.now();
+        const duration = this.animationDuration;
+
+        return new Promise(resolve => {
+          const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Use easing for smooth motion
+            const easedProgress = this.easeInOutCubic(progress);
+
+            // Calculate rotation angles for corner peel effect
+            // The page rotates on a diagonal axis (like peeling from top-right corner)
+            const maxRotateX = -75;  // Tilt back
+            const maxRotateY = goingForward ? -120 : 120;  // Turn sideways
+            const maxRotateZ = goingForward ? 25 : -25;  // Slight twist
+
+            const rotateX = easedProgress * maxRotateX;
+            const rotateY = easedProgress * maxRotateY;
+            const rotateZ = easedProgress * maxRotateZ;
+
+            // Lift the page up and back as it curls
+            const liftY = Math.sin(easedProgress * Math.PI) * -80;
+            const liftZ = easedProgress * 150;
+
+            // Move page toward the corner it's peeling from
+            const moveX = goingForward ? easedProgress * -100 : easedProgress * 100;
+            const moveY = easedProgress * -50;
+
+            // Apply the transform
+            curlPage.style.transform = `
+              translateX(${moveX}px)
+              translateY(${moveY + liftY}px)
+              translateZ(${liftZ}px)
+              rotateX(${rotateX}deg)
+              rotateY(${rotateY}deg)
+              rotateZ(${rotateZ}deg)
+            `;
+
+            // Dynamic shadow
+            const shadowIntensity = Math.sin(easedProgress * Math.PI * 0.8);
+            shadow.style.opacity = shadowIntensity * 0.6;
+
+            // Gradient overlay intensity
+            gradient.style.opacity = shadowIntensity * 0.8;
+
+            // Dynamic box shadow on curling page
+            const shadowBlur = 20 + shadowIntensity * 40;
+            const shadowOffset = shadowIntensity * 30;
+            curlPage.style.boxShadow = `
+              ${goingForward ? -shadowOffset : shadowOffset}px ${shadowOffset}px ${shadowBlur}px rgba(0,0,0,${0.3 + shadowIntensity * 0.2})
+            `;
+
+            // Slight brightness change
+            const brightness = 1 - shadowIntensity * 0.15;
+            curlPage.style.filter = `brightness(${brightness})`;
+
+            // Fade out near the end
+            if (progress > 0.7) {
+              curlPage.style.opacity = 1 - ((progress - 0.7) / 0.3);
+            }
+
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            } else {
+              resolve();
+            }
+          };
+
+          requestAnimationFrame(animate);
+        });
+      }
+
+      // Animate page turn to a specific page with paper curl effect
+      async turnToPage(targetPage, animate = true) {
+        if (targetPage < 1 || targetPage > this.totalPages || targetPage === this.currentPage) return;
+        if (this.isAnimating) return;
+
+        const goingForward = targetPage > this.currentPage;
+        this.isAnimating = true;
+
+        // Pre-render the target page on the next canvas
+        await this.renderPage(targetPage, this.canvasNext);
+
+        if (animate) {
+          // Create curl page from current page
+          this.createCurlPage(this.canvasCurrent, goingForward);
+          this.curlContainer.classList.add('active');
+
+          // Hide the original current page (curl strips will show instead)
+          this.pageCurrent.style.opacity = '0';
+
+          // Start revealing next page with animation
+          this.pageNext.classList.add(goingForward ? 'turning-in' : 'turning-back-in');
+
+          // Animate the paper curl
+          await this.animateCurl(goingForward);
+
+          // Clean up curl animation
+          this.curlContainer.classList.remove('active');
+          this.curlContainer.innerHTML = '';
+
+          // Remove animation classes
+          this.pageNext.classList.remove('turning-in', 'turning-back-in');
+          this.pageCurrent.style.opacity = '1';
+        }
+
+        // Swap canvases - copy next to current
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.canvasNext.width;
+        tempCanvas.height = this.canvasNext.height;
+        tempCanvas.getContext('2d').drawImage(this.canvasNext, 0, 0);
+        this.canvasCurrent.width = tempCanvas.width;
+        this.canvasCurrent.height = tempCanvas.height;
+        this.canvasCurrent.getContext('2d').drawImage(tempCanvas, 0, 0);
+
+        // Reset next page
+        this.pageNext.classList.remove('current');
+        this.pageNext.classList.add('next');
+        this.pageCurrent.classList.add('current');
+        this.pageCurrent.classList.remove('next');
+
+        this.currentPage = targetPage;
+        this.updateIndicator();
+        this.isAnimating = false;
+      }
+
+      async prevPage() {
+        if (this.currentPage > 1) {
+          await this.turnToPage(this.currentPage - 1);
+        }
+      }
+
+      async nextPage() {
+        if (this.currentPage < this.totalPages) {
+          await this.turnToPage(this.currentPage + 1);
+        }
+      }
+
+      show() {
+        this.container.style.display = 'block';
+        // Trigger reflow then add visible class for animation
+        this.container.offsetHeight;
+        requestAnimationFrame(() => {
+          this.container.classList.add('visible');
+        });
+      }
+
+      hide() {
+        this.container.classList.remove('visible');
+        setTimeout(() => {
+          if (!this.container.classList.contains('visible')) {
+            this.container.style.display = 'none';
+          }
+        }, 800);
+      }
+
+      // Get current page number
+      getCurrentPage() {
+        return this.currentPage;
+      }
+
+      // Get total pages
+      getTotalPages() {
+        return this.totalPages;
+      }
+    }
+
+    // Main App
+    class App {
+      constructor() {
+        this.container = document.getElementById('canvas-container');
+        this.loadingScreen = document.getElementById('loading-screen');
+        this.progressBar = document.getElementById('progress-bar');
+        this.startBtn = document.getElementById('start-btn');
+        this.infoPanel = document.getElementById('info-panel');
+        this.speechBubble = document.getElementById('speech-bubble');
+        this.navContainer = document.getElementById('nav-container');
+        this.viewCvBtn = document.getElementById('view-cv-btn');
+        this.currentSection = 0;
+        this.isPlaying = false;
+        this.papers = [];
+        this.penGroup = null;
+        this.inkLine = null;
+
+        this.pdfBooklet = new PDFBooklet();
+        this.init();
+      }
+
+      async init() {
+        this.setupRenderer();
+        this.setupScene();
+        this.setupCamera();
+        this.createLighting();
+        this.createBox();
+        this.createPapersAndPen();
+        this.setupPostProcessing();
+        this.setupEvents();
+        await this.pdfBooklet.loadPDF('/Users/linton/Documents/Linton_EvansComplete_CV-Dec25-1.pdf') || await this.pdfBooklet.loadPDF('./cv.pdf');
+        await this.simulateLoading();
+        this.animate();
+      }
+
+      setupRenderer() {
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, premultipliedAlpha: false });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.setClearColor(0x000000, 0);
+        this.container.appendChild(this.renderer.domElement);
+      }
+
+      setupScene() {
+        this.scene = new THREE.Scene();
+        this.scene.background = null;
+      }
+
+      setupCamera() {
+        this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera.position.set(0, 1.5, 4);
+        this.camera.lookAt(0, 0.8, 0);
+      }
+
+      setupPostProcessing() {
+        // Skip post-processing to keep background transparency
+        // The neural network background provides enough visual interest
+        this.useComposer = false;
+      }
+
+      createLighting() {
+        this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const key = new THREE.DirectionalLight(0xffffff, 1);
+        key.position.set(3, 5, 5);
+        this.scene.add(key);
+        const fill = new THREE.DirectionalLight(0x88aaff, 0.4);
+        fill.position.set(-3, 3, 2);
+        this.scene.add(fill);
+        const rim = new THREE.DirectionalLight(0xa3e635, 0.3);
+        rim.position.set(0, 2, -4);
+        this.scene.add(rim);
+      }
+
+      createBox() {
+        this.boxGroup = new THREE.Group();
+        const mat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, metalness: 0.3, roughness: 0.4 });
+        const size = 1.5;
+
+        this.boxParts = {};
+        this.boxParts.bottom = new THREE.Mesh(new THREE.BoxGeometry(size, 0.06, size), mat);
+        this.boxParts.bottom.position.y = -size/2;
+        this.boxGroup.add(this.boxParts.bottom);
+
+        const panel = new THREE.BoxGeometry(size, size, 0.06);
+        const side = new THREE.BoxGeometry(0.06, size, size);
+
+        this.boxParts.front = new THREE.Mesh(panel, mat);
+        this.boxParts.front.position.set(0, 0, size/2);
+        this.boxGroup.add(this.boxParts.front);
+
+        this.boxParts.back = new THREE.Mesh(panel, mat);
+        this.boxParts.back.position.set(0, 0, -size/2);
+        this.boxGroup.add(this.boxParts.back);
+
+        this.boxParts.left = new THREE.Mesh(side, mat);
+        this.boxParts.left.position.set(-size/2, 0, 0);
+        this.boxGroup.add(this.boxParts.left);
+
+        this.boxParts.right = new THREE.Mesh(side, mat);
+        this.boxParts.right.position.set(size/2, 0, 0);
+        this.boxGroup.add(this.boxParts.right);
+
+        this.boxParts.lid = new THREE.Mesh(new THREE.BoxGeometry(size+0.08, 0.06, size+0.08), mat);
+        this.boxParts.lid.position.y = size/2;
+        this.boxGroup.add(this.boxParts.lid);
+
+        this.boxParts.glow = new THREE.PointLight(0xa3e635, 0, 5);
+        this.boxGroup.add(this.boxParts.glow);
+
+        this.boxGroup.rotation.y = 0.3;
+        this.scene.add(this.boxGroup);
+        this.boxUnpacked = false;
+      }
+
+      createPapersAndPen() {
+        // Helper function to create paper canvas with optional pre-written content
+        const createPaperCanvas = (contentType = 'blank') => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 512;
+          canvas.height = 680;
+          const ctx = canvas.getContext('2d');
+
+          // Paper background
+          ctx.fillStyle = '#faf8f5';
+          ctx.fillRect(0, 0, 512, 680);
+
+          // Add subtle paper texture lines
+          ctx.strokeStyle = 'rgba(200, 195, 185, 0.3)';
+          ctx.lineWidth = 0.5;
+          for (let y = 30; y < 680; y += 25) {
+            ctx.beginPath();
+            ctx.moveTo(30, y);
+            ctx.lineTo(482, y);
+            ctx.stroke();
+          }
+
+          // Add pre-written content based on type
+          if (contentType !== 'blank' && contentType !== 'active') {
+            ctx.font = 'italic 16px Georgia, serif';
+            ctx.fillStyle = 'rgba(25, 25, 50, 0.7)';
+
+            const contentSets = {
+              notes1: [
+                'Technical Architecture Notes',
+                '',
+                '• API Design Patterns',
+                '• Microservices architecture',
+                '• Cloud infrastructure (AWS/Azure)',
+                '• Performance optimization',
+                '',
+                'Key Projects:',
+                '- E-commerce platform redesign',
+                '- Real-time data processing',
+                '- Legacy system migration',
+                '',
+                'Stakeholder Management',
+                '• Cross-functional teams',
+                '• Executive presentations'
+              ],
+              notes2: [
+                'Professional Development',
+                '',
+                'Certifications:',
+                '• AWS Solutions Architect',
+                '• Microsoft Azure',
+                '• ITIL Foundation',
+                '',
+                'Skills Assessment:',
+                '- Leadership: Strong',
+                '- Technical: Expert',
+                '- Communication: Excellent',
+                '',
+                'Goals for 2025:',
+                '• Expand cloud expertise',
+                '• Mentor junior developers'
+              ],
+              notes3: [
+                'Meeting Notes - Q4 Review',
+                '',
+                'Discussion Points:',
+                '• Product roadmap alignment',
+                '• Resource allocation',
+                '• Timeline adjustments',
+                '',
+                'Action Items:',
+                '1. Review architecture docs',
+                '2. Schedule team sync',
+                '3. Update stakeholders',
+                '',
+                'Follow-up required:',
+                '- Budget review next week'
+              ],
+              notes4: [
+                'Ideas & Innovation',
+                '',
+                'New initiatives:',
+                '• AI/ML integration',
+                '• Process automation',
+                '• Developer experience',
+                '',
+                'Research topics:',
+                '- Emerging technologies',
+                '- Industry best practices',
+                '- Competitive analysis',
+                '',
+                'Brainstorm session notes',
+                'scheduled for Friday'
+              ]
+            };
+
+            const lines = contentSets[contentType] || contentSets.notes1;
+            let y = 60;
+            lines.forEach((line, idx) => {
+              if (idx === 0) {
+                ctx.font = 'bold italic 18px Georgia, serif';
+                ctx.fillStyle = 'rgba(25, 25, 50, 0.8)';
+              } else {
+                ctx.font = 'italic 15px Georgia, serif';
+                ctx.fillStyle = 'rgba(25, 25, 50, 0.65)';
+              }
+              ctx.fillText(line, 45, y);
+              y += line === '' ? 15 : 28;
+            });
+
+            // Add some decorative squiggles/underlines for realism
+            ctx.strokeStyle = 'rgba(25, 25, 50, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(45, 75);
+            ctx.lineTo(280, 75);
+            ctx.stroke();
+          }
+
+          return canvas;
+        };
+
+        // Create main paper (center) with canvas texture for active handwriting
+        this.inkCanvas = createPaperCanvas('active');
+        this.inkCtx = this.inkCanvas.getContext('2d');
+
+        this.paperTexture = new THREE.CanvasTexture(this.inkCanvas);
+        this.paperTexture.needsUpdate = true;
+
+        const paperMat = new THREE.MeshStandardMaterial({
+          map: this.paperTexture,
+          roughness: 0.9,
+          side: THREE.DoubleSide,
+          metalness: 0
+        });
+
+        // Content types for each paper (index 2 is the active one)
+        const paperContents = ['notes1', 'notes2', 'active', 'notes3', 'notes4'];
+
+        // Create 5 paper sheets
+        for (let i = 0; i < 5; i++) {
+          let mat;
+          if (i === 2) {
+            // Center paper - active writing surface
+            mat = paperMat;
+          } else {
+            // Background papers with pre-written content
+            const bgCanvas = createPaperCanvas(paperContents[i]);
+            const bgTexture = new THREE.CanvasTexture(bgCanvas);
+            mat = new THREE.MeshStandardMaterial({
+              map: bgTexture,
+              roughness: 0.9,
+              side: THREE.DoubleSide,
+              metalness: 0
+            });
+          }
+
+          const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.2), mat);
+          paper.visible = false;
+          paper.userData = {
+            targetX: (i - 2) * 0.3,
+            targetY: 1.2 + i * 0.02,
+            targetZ: 1.5 + i * 0.1,
+            targetRotX: -0.3,
+            targetRotY: (i - 2) * 0.1,
+            delay: i * 0.1
+          };
+          this.papers.push(paper);
+          this.scene.add(paper);
+        }
+
+        // Create realistic fountain pen using sprite for cleaner look
+        this.penGroup = new THREE.Group();
+        this.penGroup.visible = false;
+
+        // Create pen using 2D canvas for crisp rendering
+        const penCanvas = document.createElement('canvas');
+        penCanvas.width = 64;
+        penCanvas.height = 256;
+        const pctx = penCanvas.getContext('2d');
+
+        // Draw pen body - elegant black with gold accents
+        const gradient = pctx.createLinearGradient(20, 0, 44, 0);
+        gradient.addColorStop(0, '#0a0a15');
+        gradient.addColorStop(0.3, '#1a1a25');
+        gradient.addColorStop(0.7, '#1a1a25');
+        gradient.addColorStop(1, '#0a0a15');
+
+        // Barrel
+        pctx.fillStyle = gradient;
+        pctx.beginPath();
+        pctx.roundRect(22, 20, 20, 140, 3);
+        pctx.fill();
+
+        // Gold cap band
+        pctx.fillStyle = '#c9a227';
+        pctx.fillRect(20, 25, 24, 8);
+        pctx.fillRect(20, 45, 24, 4);
+
+        // Gold clip
+        pctx.fillStyle = '#c9a227';
+        pctx.fillRect(44, 30, 4, 50);
+        pctx.beginPath();
+        pctx.arc(46, 80, 4, 0, Math.PI * 2);
+        pctx.fill();
+
+        // Grip section (darker)
+        pctx.fillStyle = '#15152a';
+        pctx.beginPath();
+        pctx.moveTo(26, 160);
+        pctx.lineTo(38, 160);
+        pctx.lineTo(36, 195);
+        pctx.lineTo(28, 195);
+        pctx.closePath();
+        pctx.fill();
+
+        // Gold nib
+        pctx.fillStyle = '#d4af37';
+        pctx.beginPath();
+        pctx.moveTo(32, 195);
+        pctx.lineTo(26, 230);
+        pctx.quadraticCurveTo(32, 256, 32, 256);
+        pctx.quadraticCurveTo(32, 256, 38, 230);
+        pctx.lineTo(32, 195);
+        pctx.fill();
+
+        // Nib slit
+        pctx.strokeStyle = '#000';
+        pctx.lineWidth = 1;
+        pctx.beginPath();
+        pctx.moveTo(32, 210);
+        pctx.lineTo(32, 252);
+        pctx.stroke();
+
+        // Breather hole
+        pctx.fillStyle = '#000';
+        pctx.beginPath();
+        pctx.arc(32, 215, 2, 0, Math.PI * 2);
+        pctx.fill();
+
+        const penTexture = new THREE.CanvasTexture(penCanvas);
+        const penMaterial = new THREE.SpriteMaterial({
+          map: penTexture,
+          transparent: true
+        });
+        this.penSprite = new THREE.Sprite(penMaterial);
+        this.penSprite.scale.set(0.15, 0.6, 1);
+        this.penGroup.add(this.penSprite);
+
+        this.scene.add(this.penGroup);
+
+        // Initialize ink drawing state
+        this.inkPoints = [];
+        this.lastInkPoint = null;
+      }
+
+      setupEvents() {
+        this.startBtn.addEventListener('click', () => this.startExperience());
+        document.getElementById('skip-btn').addEventListener('click', () => this.skipToNext());
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+          btn.addEventListener('click', e => this.goToSection(parseInt(e.target.dataset.section)));
+        });
+        window.addEventListener('resize', () => this.onResize());
+        window.addEventListener('keydown', e => {
+          if (e.key === 'ArrowRight' || e.key === ' ') this.skipToNext();
+          if (e.key === 'ArrowLeft') this.goToSection(Math.max(0, this.currentSection - 1));
+        });
+      }
+
+      async simulateLoading() {
+        // Slower, more gradual loading with variable speeds
+        const steps = [0, 15, 35, 50, 70, 85, 95, 100];
+        const delays = [400, 350, 300, 400, 350, 300, 250]; // Variable delays between steps
+
+        for (let i = 0; i < steps.length; i++) {
+          this.progressBar.style.width = `${steps[i]}%`;
+          if (i < delays.length) {
+            await new Promise(r => setTimeout(r, delays[i]));
+          }
+        }
+        await new Promise(r => setTimeout(r, 500));
+        this.loadingScreen.classList.add('hidden');
+        this.startBtn.classList.add('visible');
+      }
+
+      async startExperience() {
+        this.startBtn.style.display = 'none';
+        this.isPlaying = true;
+        await this.unpackBoxWithPapers();
+        this.navContainer.style.display = 'flex';
+        this.viewCvBtn.classList.add('visible');
+        this.playSection(0);
+      }
+
+      async unpackBoxWithPapers() {
+        return new Promise(resolve => {
+          const duration = 6000;
+          const start = performance.now();
+          let papersFlying = false;
+          let penWriting = false;
+          let penWriteStart = 0;
+
+          // Create realistic handwriting path on canvas
+          // "Linton Evans" signature with proper letter forms
+          const signaturePath = this.generateSignaturePath();
+          let currentPathIndex = 0;
+
+          const animate = (now) => {
+            const elapsed = now - start;
+            const t = Math.min(elapsed / duration, 1);
+
+            // Phase 1: Open lid and fly off (0 - 0.25)
+            if (t < 0.25) {
+              const lt = t / 0.25;
+              this.boxParts.glow.intensity = Math.sin(Math.min(lt * 2, 1) * Math.PI) * 3;
+
+              if (lt < 0.4) {
+                // First part: lid opens
+                const openT = lt / 0.4;
+                this.boxParts.lid.position.y = 0.75 + openT * 1.2;
+                this.boxParts.lid.rotation.x = -openT * Math.PI / 2.5;
+              } else {
+                // Second part: lid flies off screen
+                const flyT = (lt - 0.4) / 0.6;
+                const flyEase = flyT * flyT; // accelerate
+                this.boxParts.lid.position.y = 1.95 + flyEase * 5;
+                this.boxParts.lid.position.z = flyEase * -3;
+                this.boxParts.lid.rotation.x = -Math.PI / 2.5 - flyEase * Math.PI;
+                this.boxParts.lid.material.opacity = 1 - flyT;
+                this.boxParts.lid.material.transparent = true;
+              }
+            } else {
+              // Hide lid completely after animation
+              this.boxParts.lid.visible = false;
+            }
+
+            // Phase 2: Papers fly out (0.12 - 0.4)
+            if (t > 0.12 && !papersFlying) {
+              papersFlying = true;
+              this.papers.forEach(p => {
+                p.visible = true;
+                p.position.set(0, 0, 0);
+                p.rotation.set(0, 0, 0);
+                p.scale.set(0.1, 0.1, 0.1);
+              });
+            }
+
+            if (papersFlying && t < 0.4) {
+              const pt = (t - 0.12) / 0.28;
+              this.papers.forEach((paper, i) => {
+                const d = paper.userData;
+                const localT = Math.max(0, Math.min(1, (pt - d.delay) / (1 - d.delay)));
+                const ease = 1 - Math.pow(1 - localT, 3);
+
+                paper.position.x = d.targetX * ease;
+                paper.position.y = d.targetY * ease + Math.sin(localT * Math.PI) * 0.5;
+                paper.position.z = d.targetZ * ease;
+                paper.rotation.x = d.targetRotX * ease + (1 - ease) * Math.PI * 2;
+                paper.rotation.y = d.targetRotY * ease;
+                paper.rotation.z = (1 - ease) * Math.PI;
+                paper.scale.setScalar(0.1 + ease * 0.9);
+              });
+            }
+
+            // Phase 3: Box sides fall (0.15 - 0.35)
+            if (t > 0.15 && t < 0.35) {
+              const st = (t - 0.15) / 0.2;
+              this.boxParts.front.position.y = -st * 2;
+              this.boxParts.front.rotation.x = -st * Math.PI / 2;
+              this.boxParts.back.position.y = -st * 2;
+              this.boxParts.back.rotation.x = st * Math.PI / 2;
+              this.boxParts.left.position.y = -st * 2;
+              this.boxParts.left.rotation.z = st * Math.PI / 2;
+              this.boxParts.right.position.y = -st * 2;
+              this.boxParts.right.rotation.z = -st * Math.PI / 2;
+            }
+
+            // Phase 4: Pen appears, approaches paper, then writes (0.28 - 0.78)
+            // First sub-phase: Pen appears and approaches (0.28 - 0.38)
+            // Second sub-phase: Pen writes (0.38 - 0.78)
+            const penAppearTime = 0.28;
+            const penReachPaperTime = 0.38;
+            const penEndTime = 0.78;
+
+            if (t > penAppearTime && !penWriting) {
+              penWriting = true;
+              penWriteStart = now;
+              this.penGroup.visible = true;
+              // Start pen off to the upper right, ready to swoop in
+              this.penGroup.position.set(0.8, 2.5, 2.5);
+            }
+
+            if (penWriting && t < penEndTime) {
+              // Pen base Z - in front of all papers
+              const penBaseZ = 2.1;
+
+              // Pen nib offset - the nib is at the bottom of the sprite
+              // Sprite scale is 0.15 x 0.6, so half height is 0.3
+              // Move pen UP so the nib tip aligns with ink point
+              const nibOffsetY = 0.15;
+
+              // Helper to convert canvas coords to 3D pen position
+              const canvasTo3D = (canvasX, canvasY) => {
+                // Paper geometry is 0.9 x 1.2, centered at paper position
+                // Canvas is 512 x 680
+                // Center paper (index 2) is at y=1.24 (1.2 + 2*0.02)
+                const paperCenterY = 1.24;
+                const paperWidth = 0.9;
+                const paperHeight = 1.2;
+
+                // Canvas Y: 0 = top, 680 = bottom
+                // 3D Y: higher = up on screen
+                // So canvasY=80 (near top) should give high 3D Y
+                const penX = (canvasX / 512 - 0.5) * paperWidth;
+                const penY = paperCenterY + (0.5 - canvasY / 680) * paperHeight + nibOffsetY;
+                return { x: penX, y: penY };
+              };
+
+              // Get first point of signature for pen target
+              const firstPoint = signaturePath[0];
+              const firstPen3D = canvasTo3D(firstPoint.x, firstPoint.y);
+
+              let targetPenX, targetPenY, targetPenZ;
+              let penRotation = -0.5;
+
+              if (t < penReachPaperTime) {
+                // APPROACH PHASE: Pen swoops down to starting position (no ink yet)
+                const approachT = (t - penAppearTime) / (penReachPaperTime - penAppearTime);
+                const approachEase = 1 - Math.pow(1 - approachT, 3); // ease out cubic
+
+                // Interpolate from start position to first writing point
+                targetPenX = 0.8 + (firstPen3D.x - 0.8) * approachEase;
+                targetPenY = 2.5 + (firstPen3D.y - 2.5) * approachEase;
+                targetPenZ = 2.5 + (penBaseZ - 2.5) * approachEase;
+
+                // Pen tilts as it approaches
+                penRotation = -0.3 + approachEase * -0.2;
+
+              } else {
+                // WRITING PHASE: Pen moves along signature path and draws ink
+                const writeStartTime = penReachPaperTime;
+                const writeDuration = penEndTime - penReachPaperTime;
+                const penT = Math.min((t - writeStartTime) / writeDuration, 1);
+
+                // Smooth easing for pen progress
+                const easedPenT = penT < 0.5
+                  ? 2 * penT * penT
+                  : 1 - Math.pow(-2 * penT + 2, 2) / 2;
+
+                // Calculate which point the pen should be at
+                const exactIndex = easedPenT * signaturePath.length;
+                const idx1 = Math.floor(exactIndex);
+                const idx2 = Math.min(idx1 + 1, signaturePath.length - 1);
+                const blend = exactIndex - idx1;
+
+                if (idx1 < signaturePath.length && penT < 0.92) {
+                  const point1 = signaturePath[idx1];
+                  const point2 = signaturePath[idx2];
+
+                  // Interpolate between points for smooth pen movement
+                  const interpX = point1.x + (point2.x - point1.x) * blend;
+                  const interpY = point1.y + (point2.y - point1.y) * blend;
+
+                  // Position pen FIRST at the exact point
+                  const pen3D = canvasTo3D(interpX, interpY);
+                  targetPenX = pen3D.x;
+                  targetPenY = pen3D.y;
+                  targetPenZ = penBaseZ;
+
+                  // Check if current point is a lift (pen up)
+                  if (point1.lift) {
+                    targetPenY += 0.08;
+                    targetPenZ += 0.03;
+                  }
+
+                  // Natural pen tilt based on writing direction
+                  if (idx2 > idx1 && !point1.lift) {
+                    const dx = point2.x - point1.x;
+                    const dy = point2.y - point1.y;
+                    penRotation = -0.5 + Math.atan2(dy, dx) * 0.1;
+                  }
+
+                  // NOW draw ink up to current position (ink follows pen, not the other way around)
+                  while (currentPathIndex <= idx1 && currentPathIndex < signaturePath.length) {
+                    const point = signaturePath[currentPathIndex];
+                    this.drawInkPoint(point);
+                    currentPathIndex++;
+                  }
+                  this.paperTexture.needsUpdate = true;
+
+                } else {
+                  // Pen lifts away gracefully at the end
+                  const liftT = Math.min((penT - 0.92) / 0.08, 1);
+                  const liftEase = liftT * liftT;
+
+                  // Draw any remaining ink
+                  while (currentPathIndex < signaturePath.length) {
+                    const point = signaturePath[currentPathIndex];
+                    this.drawInkPoint(point);
+                    currentPathIndex++;
+                  }
+                  this.paperTexture.needsUpdate = true;
+
+                  // Get last signature point as starting position for lift
+                  const lastPoint = signaturePath[signaturePath.length - 1];
+                  const lastPen3D = canvasTo3D(lastPoint.x, lastPoint.y);
+
+                  targetPenX = lastPen3D.x + liftEase * 1.0;
+                  targetPenY = lastPen3D.y + liftEase * 0.8;
+                  targetPenZ = penBaseZ + liftEase * 0.6;
+                  penRotation = -0.5 + liftEase * 0.4;
+                }
+              }
+
+              // Direct pen positioning during writing (no lag)
+              // Only use lerp for approach phase smoothness
+              if (t < penReachPaperTime) {
+                const lerpSpeed = 0.3;
+                this.penGroup.position.x += (targetPenX - this.penGroup.position.x) * lerpSpeed;
+                this.penGroup.position.y += (targetPenY - this.penGroup.position.y) * lerpSpeed;
+                this.penGroup.position.z += (targetPenZ - this.penGroup.position.z) * lerpSpeed;
+              } else {
+                // During writing: pen follows ink exactly
+                this.penGroup.position.x = targetPenX;
+                this.penGroup.position.y = targetPenY;
+                this.penGroup.position.z = targetPenZ;
+              }
+
+              // Smooth rotation always
+              const currentRotation = this.penSprite.material.rotation;
+              this.penSprite.material.rotation += (penRotation - currentRotation) * 0.15;
+            }
+
+            // Phase 5: Pen fades and papers stack together (0.78 - 0.88)
+            if (t > 0.78 && t <= 0.88) {
+              const stackT = (t - 0.78) / 0.10;
+              const stackEase = 1 - Math.pow(1 - stackT, 3); // ease out cubic
+
+              // Fade out pen
+              if (this.penSprite && this.penSprite.material) {
+                this.penSprite.material.opacity = 1 - stackT;
+              }
+
+              // Animate all papers to stack together at center
+              this.papers.forEach((paper, i) => {
+                const d = paper.userData;
+                // Target: all papers stack at center, slightly offset in Z for depth
+                const stackX = 0;
+                const stackY = 1.35;
+                const stackZ = 1.7 + i * 0.008; // Tiny offset for stacking effect
+                const stackRotX = -0.25;
+                const stackRotY = 0;
+
+                // Interpolate from spread position to stack position
+                paper.position.x = d.targetX * (1 - stackEase) + stackX * stackEase;
+                paper.position.y = d.targetY * (1 - stackEase) + stackY * stackEase;
+                paper.position.z = d.targetZ * (1 - stackEase) + stackZ * stackEase;
+                paper.rotation.x = d.targetRotX * (1 - stackEase) + stackRotX * stackEase;
+                paper.rotation.y = d.targetRotY * (1 - stackEase) + stackRotY * stackEase;
+                paper.rotation.z = 0;
+              });
+            }
+
+            // Phase 6: Stacked papers sink into background (0.88 - 1.0)
+            if (t > 0.88) {
+              const sinkT = (t - 0.88) / 0.12;
+              const sinkEase = sinkT < 0.5
+                ? 2 * sinkT * sinkT
+                : 1 - Math.pow(-2 * sinkT + 2, 2) / 2; // ease in-out quad
+
+              // Ensure pen is hidden
+              if (this.penSprite && this.penSprite.material) {
+                this.penSprite.material.opacity = 0;
+              }
+
+              // Animate stacked papers to sink into background
+              this.papers.forEach((paper, i) => {
+                // Start from stacked position
+                const stackX = 0;
+                const stackY = 1.35;
+                const stackZ = 1.7 + i * 0.008;
+                const stackRotX = -0.25;
+
+                // Target: sink back, down, and scale smaller
+                const sinkX = 0;
+                const sinkY = 0.3;
+                const sinkZ = -2;
+                const sinkRotX2 = -0.1;
+                const sinkScale = 0.3;
+
+                // Interpolate from stack position to sink position
+                paper.position.x = stackX * (1 - sinkEase) + sinkX * sinkEase;
+                paper.position.y = stackY * (1 - sinkEase) + sinkY * sinkEase;
+                paper.position.z = stackZ * (1 - sinkEase) + sinkZ * sinkEase;
+                paper.rotation.x = stackRotX * (1 - sinkEase) + sinkRotX2 * sinkEase;
+
+                // Scale down as they sink
+                const currentScale = 1 - (1 - sinkScale) * sinkEase;
+                paper.scale.set(currentScale, currentScale, 1);
+
+                // Fade out towards the end
+                if (sinkT > 0.5) {
+                  const fadeT = (sinkT - 0.5) / 0.5;
+                  paper.material.transparent = true;
+                  paper.material.opacity = 1 - fadeT;
+                }
+              });
+            }
+
+            if (t < 1) {
+              requestAnimationFrame(animate);
+            } else {
+              this.boxGroup.visible = false;
+              this.papers.forEach(p => p.visible = false);
+              this.penGroup.visible = false;
+              this.boxUnpacked = true;
+
+              setTimeout(() => this.pdfBooklet.show(), 300);
+              resolve();
+            }
+          };
+
+          requestAnimationFrame(animate);
+        });
+      }
+
+      // Generate multiple lines of handwritten text
+      generateSignaturePath() {
+        const path = [];
+
+        // Helper to add bezier curve points
+        const addCurve = (x1, y1, cx1, cy1, cx2, cy2, x2, y2, pressure = 1) => {
+          for (let t = 0; t <= 1; t += 0.03) {
+            const mt = 1 - t;
+            const x = mt*mt*mt*x1 + 3*mt*mt*t*cx1 + 3*mt*t*t*cx2 + t*t*t*x2;
+            const y = mt*mt*mt*y1 + 3*mt*mt*t*cy1 + 3*mt*t*t*cy2 + t*t*t*y2;
+            path.push({ x, y, pressure: pressure * (0.8 + Math.sin(t * Math.PI) * 0.2), lift: false });
+          }
+        };
+
+        // Helper to write cursive text at position
+        const writeWord = (word, startX, startY, scale = 1) => {
+          let x = startX;
+          const letterSpacing = 12 * scale;
+
+          for (const char of word.toLowerCase()) {
+            const s = scale;
+            switch(char) {
+              case 'l':
+                addCurve(x, startY, x, startY - 35*s, x + 3*s, startY - 45*s, x + 6*s, startY - 38*s, 1);
+                addCurve(x + 6*s, startY - 38*s, x + 10*s, startY - 30*s, x + 6*s, startY, x + 20*s, startY + 5*s, 0.9);
+                x += 18 * s;
+                break;
+              case 'i':
+                path.push({ x: x + 2*s, y: startY, pressure: 0, lift: true });
+                addCurve(x + 2*s, startY, x + 4*s, startY - 15*s, x + 8*s, startY - 18*s, x + 10*s, startY + 3*s, 0.8);
+                x += 12 * s;
+                break;
+              case 'n':
+                addCurve(x, startY + 3*s, x + 3*s, startY - 18*s, x + 12*s, startY - 18*s, x + 14*s, startY + 3*s, 0.85);
+                addCurve(x + 14*s, startY + 3*s, x + 17*s, startY - 18*s, x + 26*s, startY - 18*s, x + 28*s, startY + 3*s, 0.85);
+                x += 30 * s;
+                break;
+              case 't':
+                addCurve(x, startY + 3*s, x + 3*s, startY - 25*s, x + 7*s, startY - 30*s, x + 10*s, startY + 3*s, 0.8);
+                path.push({ x: x + 2*s, y: startY - 15*s, pressure: 0, lift: true });
+                path.push({ x: x + 2*s, y: startY - 15*s, pressure: 0.6, lift: false });
+                path.push({ x: x + 14*s, y: startY - 15*s, pressure: 0.6, lift: false });
+                x += 14 * s;
+                break;
+              case 'o':
+                path.push({ x: x + 2*s, y: startY, pressure: 0, lift: true });
+                addCurve(x + 2*s, startY, x, startY - 15*s, x + 12*s, startY - 18*s, x + 15*s, startY, 0.75);
+                addCurve(x + 15*s, startY, x + 18*s, startY + 8*s, x + 5*s, startY + 8*s, x + 2*s, startY, 0.75);
+                x += 18 * s;
+                break;
+              case 'e':
+                path.push({ x: x + 2*s, y: startY - 8*s, pressure: 0, lift: true });
+                addCurve(x + 2*s, startY - 8*s, x + 15*s, startY - 10*s, x + 15*s, startY - 18*s, x + 8*s, startY - 18*s, 0.8);
+                addCurve(x + 8*s, startY - 18*s, x, startY - 16*s, x, startY + 5*s, x + 12*s, startY + 8*s, 0.8);
+                x += 16 * s;
+                break;
+              case 'v':
+                path.push({ x: x + 2*s, y: startY - 3*s, pressure: 0, lift: true });
+                addCurve(x + 2*s, startY - 3*s, x + 5*s, startY - 18*s, x + 10*s, startY + 10*s, x + 14*s, startY + 3*s, 0.8);
+                addCurve(x + 14*s, startY + 3*s, x + 18*s, startY - 8*s, x + 25*s, startY - 18*s, x + 28*s, startY, 0.8);
+                x += 28 * s;
+                break;
+              case 'a':
+                addCurve(x, startY, x - 3*s, startY - 15*s, x + 10*s, startY - 18*s, x + 14*s, startY, 0.75);
+                addCurve(x + 14*s, startY, x + 17*s, startY + 7*s, x + 3*s, startY + 7*s, x, startY, 0.75);
+                addCurve(x + 14*s, startY, x + 16*s, startY - 8*s, x + 20*s, startY - 3*s, x + 22*s, startY + 3*s, 0.75);
+                x += 24 * s;
+                break;
+              case 's':
+                addCurve(x, startY + 3*s, x + 3*s, startY - 10*s, x + 12*s, startY - 15*s, x + 15*s, startY - 8*s, 0.8);
+                addCurve(x + 15*s, startY - 8*s, x + 18*s, startY, x + 8*s, startY + 10*s, x + 18*s, startY + 12*s, 0.85);
+                x += 20 * s;
+                break;
+              case 'c':
+                path.push({ x: x + 12*s, y: startY - 12*s, pressure: 0, lift: true });
+                addCurve(x + 12*s, startY - 12*s, x + 5*s, startY - 18*s, x, startY - 5*s, x + 5*s, startY + 5*s, 0.8);
+                addCurve(x + 5*s, startY + 5*s, x + 10*s, startY + 10*s, x + 15*s, startY + 3*s, x + 18*s, startY, 0.8);
+                x += 18 * s;
+                break;
+              case 'u':
+                path.push({ x: x, y: startY - 3*s, pressure: 0, lift: true });
+                addCurve(x, startY - 3*s, x + 2*s, startY + 10*s, x + 12*s, startY + 10*s, x + 14*s, startY - 3*s, 0.8);
+                addCurve(x + 14*s, startY - 3*s, x + 16*s, startY + 10*s, x + 20*s, startY + 5*s, x + 22*s, startY + 3*s, 0.8);
+                x += 24 * s;
+                break;
+              case 'r':
+                addCurve(x, startY + 3*s, x + 2*s, startY - 15*s, x + 8*s, startY - 18*s, x + 12*s, startY - 10*s, 0.8);
+                x += 14 * s;
+                break;
+              case 'm':
+                addCurve(x, startY + 3*s, x + 3*s, startY - 18*s, x + 12*s, startY - 18*s, x + 14*s, startY + 3*s, 0.85);
+                addCurve(x + 14*s, startY + 3*s, x + 17*s, startY - 18*s, x + 26*s, startY - 18*s, x + 28*s, startY + 3*s, 0.85);
+                addCurve(x + 28*s, startY + 3*s, x + 31*s, startY - 18*s, x + 40*s, startY - 18*s, x + 42*s, startY + 3*s, 0.85);
+                x += 44 * s;
+                break;
+              case 'p':
+                addCurve(x, startY - 3*s, x + 2*s, startY + 25*s, x + 4*s, startY + 30*s, x + 6*s, startY + 25*s, 0.8);
+                path.push({ x: x + 4*s, y: startY - 3*s, pressure: 0, lift: true });
+                addCurve(x + 4*s, startY - 3*s, x + 3*s, startY - 15*s, x + 15*s, startY - 18*s, x + 18*s, startY - 5*s, 0.8);
+                addCurve(x + 18*s, startY - 5*s, x + 20*s, startY + 5*s, x + 8*s, startY + 5*s, x + 4*s, startY - 3*s, 0.8);
+                x += 22 * s;
+                break;
+              case 'd':
+                addCurve(x, startY, x - 3*s, startY - 15*s, x + 8*s, startY - 18*s, x + 12*s, startY, 0.75);
+                addCurve(x + 12*s, startY, x + 15*s, startY + 7*s, x + 3*s, startY + 7*s, x, startY, 0.75);
+                path.push({ x: x + 12*s, y: startY, pressure: 0, lift: true });
+                addCurve(x + 12*s, startY, x + 14*s, startY - 35*s, x + 16*s, startY - 40*s, x + 18*s, startY + 5*s, 0.8);
+                x += 22 * s;
+                break;
+              case 'y':
+                path.push({ x: x, y: startY - 3*s, pressure: 0, lift: true });
+                addCurve(x, startY - 3*s, x + 5*s, startY - 15*s, x + 10*s, startY + 8*s, x + 14*s, startY + 3*s, 0.8);
+                addCurve(x + 14*s, startY + 3*s, x + 18*s, startY - 10*s, x + 8*s, startY + 25*s, x + 5*s, startY + 30*s, 0.8);
+                x += 18 * s;
+                break;
+              case 'h':
+                addCurve(x, startY + 5*s, x + 2*s, startY - 35*s, x + 5*s, startY - 40*s, x + 8*s, startY - 35*s, 1);
+                addCurve(x + 8*s, startY - 35*s, x + 10*s, startY - 25*s, x + 6*s, startY, x + 8*s, startY + 3*s, 0.9);
+                addCurve(x + 8*s, startY + 3*s, x + 12*s, startY - 15*s, x + 20*s, startY - 15*s, x + 22*s, startY + 5*s, 0.85);
+                x += 24 * s;
+                break;
+              case 'w':
+                path.push({ x: x, y: startY - 3*s, pressure: 0, lift: true });
+                addCurve(x, startY - 3*s, x + 5*s, startY + 10*s, x + 10*s, startY - 15*s, x + 15*s, startY + 5*s, 0.8);
+                addCurve(x + 15*s, startY + 5*s, x + 20*s, startY - 15*s, x + 25*s, startY + 10*s, x + 30*s, startY - 3*s, 0.8);
+                x += 32 * s;
+                break;
+              case 'k':
+                addCurve(x, startY + 5*s, x + 2*s, startY - 35*s, x + 5*s, startY - 40*s, x + 8*s, startY - 35*s, 1);
+                addCurve(x + 8*s, startY - 35*s, x + 10*s, startY - 25*s, x + 6*s, startY + 5*s, x + 8*s, startY + 5*s, 0.9);
+                path.push({ x: x + 18*s, y: startY - 15*s, pressure: 0, lift: true });
+                addCurve(x + 18*s, startY - 15*s, x + 12*s, startY - 8*s, x + 6*s, startY - 3*s, x + 8*s, startY - 3*s, 0.75);
+                addCurve(x + 8*s, startY - 3*s, x + 12*s, startY + 3*s, x + 18*s, startY + 8*s, x + 22*s, startY + 5*s, 0.8);
+                x += 24 * s;
+                break;
+              case 'x':
+                path.push({ x: x, y: startY - 12*s, pressure: 0, lift: true });
+                addCurve(x, startY - 12*s, x + 8*s, startY, x + 12*s, startY + 8*s, x + 18*s, startY + 5*s, 0.8);
+                path.push({ x: x + 18*s, y: startY - 12*s, pressure: 0, lift: true });
+                addCurve(x + 18*s, startY - 12*s, x + 10*s, startY, x + 5*s, startY + 8*s, x, startY + 5*s, 0.8);
+                x += 20 * s;
+                break;
+              case ' ':
+                path.push({ x: x + 10*s, y: startY, pressure: 0, lift: true });
+                x += 15 * s;
+                break;
+              default:
+                x += 10 * s;
+            }
+          }
+          return x;
+        };
+
+        // Line 1: "Linton Evans" - signature style (larger)
+        let lineY = 80;
+        writeWord('Linton Evans', 50, lineY, 1.1);
+
+        // Line 2: Title
+        lineY += 55;
+        path.push({ x: 50, y: lineY, pressure: 0, lift: true });
+        writeWord('Product Architect', 50, lineY, 0.85);
+
+        // Line 3: Company
+        lineY += 45;
+        path.push({ x: 50, y: lineY, pressure: 0, lift: true });
+        writeWord('Seventeen years', 50, lineY, 0.8);
+
+        // Line 4: experience
+        lineY += 45;
+        path.push({ x: 50, y: lineY, pressure: 0, lift: true });
+        writeWord('in tech', 50, lineY, 0.8);
+
+        // Signature flourish at end
+        lineY += 60;
+        path.push({ x: 50, y: lineY, pressure: 0, lift: true });
+        addCurve(50, lineY, 150, lineY - 10, 280, lineY + 5, 400, lineY - 5, 0.5);
+
+        return path;
+      }
+
+      // Draw a single ink point on the canvas
+      drawInkPoint(point) {
+        if (point.lift) {
+          this.lastInkPoint = null;
+          return;
+        }
+
+        const ctx = this.inkCtx;
+
+        if (this.lastInkPoint && !this.lastInkPoint.lift) {
+          // Draw line from last point with varying thickness
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(15, 15, 40, ${0.85 + Math.random() * 0.1})`;
+          ctx.lineWidth = 1.5 + point.pressure * 1.5;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.moveTo(this.lastInkPoint.x, this.lastInkPoint.y);
+          ctx.lineTo(point.x, point.y);
+          ctx.stroke();
+
+          // Add slight ink spread for realism
+          if (Math.random() > 0.7) {
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(15, 15, 40, 0.1)';
+            ctx.arc(point.x, point.y, point.pressure * 2 + Math.random(), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        this.lastInkPoint = point;
+      }
+
+      async playSection(index) {
+        this.currentSection = index;
+        this.updateNavigation();
+        const sections = ['welcome', 'about', 'experience', 'skills', 'education', 'contact'];
+        const sectionName = sections[index];
+
+        // Map sections to PDF pages
+        const sectionToPage = {
+          welcome: 1,
+          about: 1,
+          experience: 2,
+          skills: 2,
+          education: 3,
+          contact: 4
+        };
+
+        // Trigger page turn animation to the appropriate page
+        const targetPage = sectionToPage[sectionName];
+        const totalPages = this.pdfBooklet.getTotalPages();
+        if (targetPage && targetPage <= totalPages) {
+          await this.pdfBooklet.turnToPage(targetPage);
+        }
+
+        // Dynamic bubble positions - alternates between left and right with random offsets
+        const getRandomPosition = (lastSide) => {
+          // Alternate sides, with random position on that side
+          const newSide = lastSide === 'left' ? 'right' : 'left';
+          return { side: newSide, position: `pos-dynamic-${newSide}` };
+        };
+
+        const icons = {
+          welcome: '👋',
+          about: '💼',
+          experience: '🚀',
+          skills: '⚡',
+          education: '🎓',
+          contact: '📬'
+        };
+
+        // Get speeches for this section (now an array)
+        const speeches = cvData.speeches[sectionName];
+        let lastSide = Math.random() > 0.5 ? 'left' : 'right'; // Random starting side
+
+        // Add initial delay for first section to let user see the CV first
+        if (index === 0) {
+          await new Promise(r => setTimeout(r, 2500)); // 2.5 second delay before first bubble
+        }
+
+        // Cycle through all speeches for this section
+        for (let i = 0; i < speeches.length; i++) {
+          // Check if we're still on this section
+          if (!this.isPlaying || this.currentSection !== index) break;
+
+          const speech = speeches[i];
+          let position;
+
+          if (sectionName === 'contact') {
+            position = 'pos-center';
+          } else {
+            const posData = getRandomPosition(lastSide);
+            lastSide = posData.side;
+            position = posData.position;
+          }
+
+          this.hideSpeechBubble();
+          await new Promise(r => setTimeout(r, 250));
+
+          this.showSpeechBubble(speech, position, icons[sectionName]);
+
+          // Wait for user to read (based on text length)
+          const readTime = Math.max(3500, speech.length * 40);
+          await new Promise(r => setTimeout(r, readTime));
+        }
+
+        // If this is the contact (final) section, close the booklet after showing bubbles
+        if (sectionName === 'contact' && this.isPlaying) {
+          await new Promise(r => setTimeout(r, 1000));
+          this.hideSpeechBubble();
+          await new Promise(r => setTimeout(r, 500));
+          this.pdfBooklet.hide();
+
+          // Show "Let's Go!" popup
+          await new Promise(r => setTimeout(r, 300));
+          const letsGoPopup = document.getElementById('lets-go-popup');
+          letsGoPopup.classList.add('visible');
+
+          // Remove the class after animation completes, then show Connect Now button
+          setTimeout(() => {
+            letsGoPopup.classList.remove('visible');
+
+            // Show Connect Now button after Let's Go fades
+            setTimeout(() => {
+              const connectBtn = document.getElementById('connect-now-btn');
+              connectBtn.classList.add('visible');
+
+              // Show persistent contact bubble
+              setTimeout(() => {
+                const contactPersistent = document.getElementById('contact-persistent');
+                contactPersistent.classList.add('visible');
+              }, 800);
+            }, 300);
+          }, 2500);
+        }
+
+        // Move to next section
+        if (index < sections.length - 1 && this.isPlaying) {
+          if (this.isPlaying && this.currentSection === index) {
+            this.hideSpeechBubble();
+            this.hideInfoPanel();
+            await new Promise(r => setTimeout(r, 500));
+            this.playSection(index + 1);
+          }
+        }
+      }
+
+      updateInfoPanel(sectionName, position) {
+        // If position is null, hide the panel
+        if (!position) {
+          this.hideInfoPanel();
+          return;
+        }
+
+        const data = {
+          welcome: { title: cvData.personal.name, subtitle: cvData.personal.title, content: `${cvData.personal.location}\n${cvData.personal.email}` },
+          about: { title: 'About Me', subtitle: '17+ Years Experience', content: cvData.shortSummary },
+          experience: { title: 'Experience', subtitle: '4 Key Roles', content: cvData.experience.map(e => `${e.title}\n${e.company}`).join('\n\n') },
+          skills: { title: 'Technical Skills', subtitle: 'Full Stack', content: Object.values(cvData.skills).flat().join(' • ') },
+          education: { title: 'Education', subtitle: cvData.education[0].degree, content: cvData.education[0].institution },
+          contact: { title: "Let's Connect", subtitle: cvData.personal.noticePeriod, content: `${cvData.personal.email}\n${cvData.personal.phone}` }
+        }[sectionName];
+
+        // Remove old position classes and add new one
+        this.infoPanel.className = 'info-panel ' + position;
+        document.getElementById('panel-title').textContent = data.title;
+        document.getElementById('panel-subtitle').textContent = data.subtitle;
+        document.getElementById('panel-content').textContent = data.content;
+
+        // Small delay for position change to take effect before showing
+        requestAnimationFrame(() => {
+          this.infoPanel.classList.add('visible');
+        });
+      }
+
+      hideInfoPanel() {
+        this.infoPanel.classList.remove('visible');
+      }
+
+      showSpeechBubble(text, position, icon = '') {
+        const iconSpan = icon ? `<span class="section-icon">${icon}</span>` : '';
+        document.getElementById('speech-text').innerHTML = iconSpan + text;
+
+        // Random animation types
+        const animations = ['anim-fade', 'anim-slide-left', 'anim-slide-right', 'anim-slide-up', 'anim-slide-down', 'anim-pop', 'anim-swing'];
+        const randomAnim = animations[Math.floor(Math.random() * animations.length)];
+
+        // Check if using dynamic positioning (random offsets)
+        if (position === 'pos-dynamic-left' || position === 'pos-dynamic-right') {
+          // Clear fixed position classes, add random animation
+          this.speechBubble.className = 'speech-bubble pos-dynamic ' + randomAnim;
+
+          // Reset inline styles
+          this.speechBubble.style.top = '';
+          this.speechBubble.style.bottom = '';
+          this.speechBubble.style.left = '';
+          this.speechBubble.style.right = '';
+
+          // Calculate the CV page boundaries
+          // CV is centered, base width 450px * scale factor
+          const zoomLevel = this.pdfBooklet.zoomLevel;
+          const scales = [1.25, 1.5, 1.9]; // default, zoomed, zoomed-max
+          const scale = scales[zoomLevel] || 1.25;
+          const cvWidth = 450 * scale;
+          const screenWidth = window.innerWidth;
+          const screenHeight = window.innerHeight;
+
+          // Calculate left and right margins (dark space)
+          const cvLeft = (screenWidth - cvWidth) / 2;
+          const cvRight = cvLeft;
+
+          // Bubble width approximately 300px
+          const bubbleWidth = 300;
+          const padding = 20;
+
+          // Random vertical position (10% to 70% of viewport)
+          const topPercent = 10 + Math.random() * 55;
+
+          if (position === 'pos-dynamic-left') {
+            // Position in left dark space - from left edge, ensuring bubble stays in dark area
+            const maxLeft = Math.max(padding, cvLeft - bubbleWidth - padding);
+            const leftPos = padding + Math.random() * Math.max(0, maxLeft - padding);
+            this.speechBubble.style.left = leftPos + 'px';
+            this.speechBubble.style.right = 'auto';
+          } else {
+            // Position in right dark space - from right edge
+            const maxRight = Math.max(padding, cvRight - bubbleWidth - padding);
+            const rightPos = padding + Math.random() * Math.max(0, maxRight - padding);
+            this.speechBubble.style.right = rightPos + 'px';
+            this.speechBubble.style.left = 'auto';
+          }
+
+          this.speechBubble.style.top = topPercent + '%';
+          this.speechBubble.style.bottom = 'auto';
+        } else {
+          // Use fixed position class with random animation
+          this.speechBubble.className = 'speech-bubble ' + position + ' ' + randomAnim;
+          this.speechBubble.style.top = '';
+          this.speechBubble.style.bottom = '';
+          this.speechBubble.style.left = '';
+          this.speechBubble.style.right = '';
+        }
+
+        // Small delay for position change to take effect before showing
+        requestAnimationFrame(() => {
+          this.speechBubble.classList.add('visible');
+        });
+      }
+
+      hideSpeechBubble() {
+        this.speechBubble.classList.remove('visible');
+      }
+
+      updateNavigation() {
+        document.querySelectorAll('.nav-btn').forEach((btn, i) => btn.classList.toggle('active', i === this.currentSection));
+      }
+
+      goToSection(index) {
+        this.isPlaying = false;
+        this.hideSpeechBubble();
+        this.playSection(index);
+      }
+
+      skipToNext() {
+        this.hideSpeechBubble();
+        if (this.currentSection < 5) this.playSection(this.currentSection + 1);
+      }
+
+      onResize() {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      animate() {
+        requestAnimationFrame(() => this.animate());
+        const time = performance.now() * 0.001;
+
+        if (!this.boxUnpacked && this.boxGroup.visible) {
+          this.boxGroup.position.y = Math.sin(time * 0.8) * 0.08;
+          this.boxGroup.rotation.y = 0.3 + Math.sin(time * 0.5) * 0.05;
+        }
+
+        this.renderer.render(this.scene, this.camera);
+      }
+    }
+
+    new App();
+  </script>
 </body>
 </html>
