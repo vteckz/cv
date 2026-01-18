@@ -662,6 +662,25 @@
       #contact-persistent .contact-item { font-size: 0.8rem; }
 
       .zoom-hint { right: 15px; }
+
+      /* Speech bubbles - position to not overlap PDF on small tablets */
+      .speech-bubble {
+        max-width: 200px !important;
+        font-size: 0.8rem;
+      }
+      .speech-bubble p { font-size: 0.8rem; }
+      .speech-bubble.pos-left {
+        left: 10px !important;
+        right: auto !important;
+      }
+      .speech-bubble.pos-right {
+        right: 10px !important;
+        left: auto !important;
+      }
+      .speech-bubble.pos-center {
+        bottom: 100px !important;
+        max-width: 280px !important;
+      }
     }
 
     /* Mobile portrait */
@@ -1141,28 +1160,72 @@
           this.clampAndApplyScroll();
         }, { passive: false });
 
-        // Touch scrolling
+        // Touch scrolling and pinch-to-zoom
+        this.initialPinchDistance = 0;
+        this.isPinching = false;
+
         this.container.addEventListener('touchstart', (e) => {
-          if (this.zoomLevel === 0) return;
-          this.isDragging = true;
-          this.lastTouchY = e.touches[0].clientY;
-          this.scrollVelocity = 0;
+          if (e.touches.length === 2) {
+            // Start pinch zoom
+            this.isPinching = true;
+            this.isDragging = false;
+            this.initialPinchDistance = this.getPinchDistance(e.touches);
+          } else if (e.touches.length === 1) {
+            // Single touch - scroll only when zoomed
+            if (this.zoomLevel === 0) return;
+            this.isDragging = true;
+            this.lastTouchY = e.touches[0].clientY;
+            this.scrollVelocity = 0;
+          }
         });
 
         this.container.addEventListener('touchmove', (e) => {
-          if (this.zoomLevel === 0 || !this.isDragging) return;
-          e.preventDefault();
-          const touchY = e.touches[0].clientY;
-          const delta = this.lastTouchY - touchY;
-          this.scrollVelocity = delta;
-          this.scrollOffset += delta;
-          this.lastTouchY = touchY;
-          this.applyScroll();
+          if (e.touches.length === 2 && this.isPinching) {
+            // Handle pinch zoom
+            e.preventDefault();
+            const currentDistance = this.getPinchDistance(e.touches);
+            const scale = currentDistance / this.initialPinchDistance;
+
+            if (scale > 1.3 && this.zoomLevel < 2) {
+              // Zoom in
+              this.zoomLevel++;
+              this.applyZoomLevel();
+              this.initialPinchDistance = currentDistance;
+            } else if (scale < 0.7 && this.zoomLevel > 0) {
+              // Zoom out
+              this.zoomLevel--;
+              this.applyZoomLevel();
+              this.initialPinchDistance = currentDistance;
+            }
+          } else if (e.touches.length === 1 && this.isDragging && !this.isPinching) {
+            // Single touch scroll
+            if (this.zoomLevel === 0) return;
+            e.preventDefault();
+            const touchY = e.touches[0].clientY;
+            const delta = this.lastTouchY - touchY;
+            this.scrollVelocity = delta;
+            this.scrollOffset += delta;
+            this.lastTouchY = touchY;
+            this.applyScroll();
+          }
         }, { passive: false });
 
-        this.container.addEventListener('touchend', () => {
-          this.isDragging = false;
-          this.animateBounceBack();
+        this.container.addEventListener('touchend', (e) => {
+          if (e.touches.length === 0) {
+            this.isPinching = false;
+            if (this.isDragging) {
+              this.isDragging = false;
+              this.animateBounceBack();
+            }
+          } else if (e.touches.length === 1) {
+            // Went from 2 fingers to 1 - reset to scroll mode
+            this.isPinching = false;
+            if (this.zoomLevel > 0) {
+              this.isDragging = true;
+              this.lastTouchY = e.touches[0].clientY;
+              this.scrollVelocity = 0;
+            }
+          }
         });
 
         // Mouse drag scrolling
@@ -1241,8 +1304,13 @@
         this.bounceAnimationId = requestAnimationFrame(animate);
       }
 
-      toggleZoom() {
-        this.zoomLevel = (this.zoomLevel + 1) % 3;
+      getPinchDistance(touches) {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      applyZoomLevel() {
         this.bookletContainer.classList.remove('zoomed', 'zoomed-max');
         if (this.zoomLevel === 1) this.bookletContainer.classList.add('zoomed');
         else if (this.zoomLevel === 2) this.bookletContainer.classList.add('zoomed-max');
@@ -1261,6 +1329,11 @@
         // Update zoom button state
         const zoomBtn = document.getElementById('zoom-btn');
         zoomBtn.classList.toggle('active', this.zoomLevel > 0);
+      }
+
+      toggleZoom() {
+        this.zoomLevel = (this.zoomLevel + 1) % 3;
+        this.applyZoomLevel();
       }
 
       async loadPDF(url) {
