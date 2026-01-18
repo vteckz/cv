@@ -531,6 +531,160 @@
     #view-cv-btn { position: absolute; top: 30px; left: 50%; transform: translateX(-50%); padding: 10px 24px; font-family: 'Space Grotesk', sans-serif; font-size: 0.9rem; background: rgba(10,10,15,0.8); backdrop-filter: blur(20px); border: 1px solid rgba(163,230,53,0.4); color: #a3e635; border-radius: 25px; cursor: pointer; display: none; }
     #view-cv-btn.visible { display: block; }
     #view-cv-btn:hover { background: rgba(163,230,53,0.2); }
+
+    /* ========== MOBILE RESPONSIVE STYLES ========== */
+
+    /* Tablets and small laptops */
+    @media (max-width: 1024px) {
+      .booklet-container { width: 400px; height: 550px; }
+      .pdf-page { width: 380px; height: 520px; }
+      .page-stack { height: 520px; }
+      .page-curl-container { width: 380px; height: 520px; }
+
+      .speech-bubble { max-width: 280px; }
+      .info-panel { max-width: 280px; padding: 20px; }
+    }
+
+    /* Mobile landscape and small tablets */
+    @media (max-width: 768px) {
+      .booklet-container { width: 340px; height: 470px; }
+      .pdf-page { width: 320px; height: 440px; }
+      .page-stack { height: 440px; }
+      .page-curl-container { width: 320px; height: 440px; }
+
+      /* Reduce zoom levels on mobile */
+      .booklet-container.zoomed { transform: scale(1.2) translateY(var(--scroll-offset, 0px)); }
+      .booklet-container.zoomed-max { transform: scale(1.4) translateY(var(--scroll-offset, 0px)); }
+
+      .booklet-nav { bottom: -75px; padding: 10px 20px; gap: 10px; }
+      .booklet-nav button { width: 36px; height: 36px; }
+      .booklet-close { top: -45px; width: 36px; height: 36px; }
+
+      .audio-controls { top: 15px; right: 15px; gap: 8px; }
+      .audio-btn { width: 38px; height: 38px; }
+
+      #start-btn { padding: 14px 35px; font-size: 1rem; }
+      #view-cv-btn { top: 15px; padding: 8px 18px; font-size: 0.85rem; }
+
+      .speech-bubble { max-width: 240px; padding: 12px 16px; font-size: 0.85rem; }
+      .speech-bubble p { font-size: 0.85rem; }
+      .speech-bubble.pos-center { max-width: 320px; bottom: 70px; }
+
+      .info-panel { max-width: 240px; padding: 16px; }
+      .info-panel h2 { font-size: 1.2rem; }
+      .info-panel p { font-size: 0.8rem; }
+
+      #lets-go-popup { font-size: 2rem; }
+
+      #connect-now-btn { padding: 14px 30px; font-size: 1rem; }
+
+      #contact-persistent { top: 70px; right: 15px; padding: 15px 18px; }
+      #contact-persistent h4 { font-size: 0.9rem; }
+      #contact-persistent .contact-item { font-size: 0.8rem; }
+    }
+
+    /* Mobile portrait */
+    @media (max-width: 480px) {
+      .booklet-container { width: calc(100vw - 30px); height: calc((100vw - 30px) * 1.35); max-height: 70vh; }
+      .pdf-page { width: calc(100vw - 50px); height: calc((100vw - 50px) * 1.35); max-height: calc(70vh - 20px); }
+      .page-stack { height: calc((100vw - 50px) * 1.35); max-height: calc(70vh - 20px); }
+      .page-curl-container { width: calc(100vw - 50px); height: calc((100vw - 50px) * 1.35); max-height: calc(70vh - 20px); }
+
+      /* Disable extra zoom on small screens */
+      .booklet-container.zoomed { transform: scale(1.1) translateY(var(--scroll-offset, 0px)); }
+      .booklet-container.zoomed-max { transform: scale(1.2) translateY(var(--scroll-offset, 0px)); }
+
+      #pdf-booklet { top: 45%; }
+
+      .booklet-nav { bottom: -65px; padding: 8px 15px; gap: 8px; border-radius: 30px; }
+      .booklet-nav button { width: 32px; height: 32px; }
+      .booklet-nav button svg { width: 16px; height: 16px; }
+      .page-indicator { font-size: 0.8rem; min-width: 60px; }
+      .booklet-close { top: -40px; right: 5px; width: 32px; height: 32px; }
+
+      .audio-controls { top: 10px; right: 10px; gap: 6px; }
+      .audio-btn { width: 34px; height: 34px; }
+      .audio-btn svg { width: 16px; height: 16px; }
+
+      #start-btn { padding: 12px 28px; font-size: 0.9rem; letter-spacing: 1px; }
+      #view-cv-btn { top: 10px; padding: 6px 14px; font-size: 0.8rem; }
+
+      /* Speech bubbles - position at bottom on mobile */
+      .speech-bubble {
+        max-width: calc(100vw - 40px) !important;
+        left: 20px !important;
+        right: 20px !important;
+        bottom: 20px !important;
+        top: auto !important;
+        transform: none !important;
+        padding: 12px 16px;
+      }
+      .speech-bubble.visible { transform: none !important; }
+      .speech-bubble::before { display: none !important; }
+      .speech-bubble p { font-size: 0.85rem; text-align: center; }
+      .speech-bubble.pos-dynamic {
+        left: 20px !important;
+        right: 20px !important;
+        max-width: none !important;
+      }
+
+      .info-panel { display: none; } /* Hide info panel on small mobile */
+
+      #lets-go-popup { font-size: 1.8rem; }
+
+      #connect-now-btn {
+        padding: 12px 25px;
+        font-size: 0.95rem;
+        width: calc(100vw - 60px);
+        max-width: 280px;
+        justify-content: center;
+      }
+
+      #contact-persistent {
+        top: auto;
+        bottom: 20px;
+        right: 15px;
+        left: 15px;
+        padding: 12px 15px;
+      }
+      #contact-persistent h4 { font-size: 0.85rem; margin-bottom: 8px; }
+      #contact-persistent .contact-item { font-size: 0.75rem; margin-bottom: 6px; gap: 8px; }
+      #contact-persistent .contact-item svg { width: 14px; height: 14px; }
+
+      .nav-container { bottom: 10px; padding: 8px 15px; gap: 8px; }
+      .nav-btn { width: 10px; height: 10px; }
+
+      .loading-box { width: 60px; height: 60px; }
+      .loading-text { font-size: 1rem; }
+      .loading-progress { width: 150px; }
+    }
+
+    /* Very small phones */
+    @media (max-width: 360px) {
+      .booklet-container { width: calc(100vw - 20px); }
+      .pdf-page { width: calc(100vw - 40px); }
+
+      #start-btn { padding: 10px 22px; font-size: 0.85rem; }
+      .speech-bubble { padding: 10px 14px; }
+      .speech-bubble p { font-size: 0.8rem; }
+
+      #connect-now-btn { padding: 10px 20px; font-size: 0.9rem; }
+    }
+
+    /* Landscape orientation on mobile */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .booklet-container { width: auto; height: 80vh; }
+      .pdf-page { width: auto; height: calc(80vh - 40px); aspect-ratio: 0.74; }
+      .page-stack { height: calc(80vh - 40px); }
+
+      #pdf-booklet { top: 50%; }
+      .booklet-nav { bottom: -55px; }
+      .booklet-close { top: -35px; }
+
+      .speech-bubble { bottom: 10px !important; max-width: 50vw !important; }
+
+      #contact-persistent { top: 60px; bottom: auto; left: auto; right: 10px; width: auto; }
+    }
   </style>
 </head>
 <body>
@@ -2307,8 +2461,11 @@
         const animations = ['anim-fade', 'anim-slide-left', 'anim-slide-right', 'anim-slide-up', 'anim-slide-down', 'anim-pop', 'anim-swing'];
         const randomAnim = animations[Math.floor(Math.random() * animations.length)];
 
-        // Check if using dynamic positioning (random offsets)
-        if (position === 'pos-dynamic-left' || position === 'pos-dynamic-right') {
+        // Check if mobile - skip dynamic positioning (CSS handles it)
+        const isMobile = window.innerWidth <= 480;
+
+        // Check if using dynamic positioning (random offsets) - only on desktop
+        if ((position === 'pos-dynamic-left' || position === 'pos-dynamic-right') && !isMobile) {
           // Clear fixed position classes, add random animation
           this.speechBubble.className = 'speech-bubble pos-dynamic ' + randomAnim;
 
@@ -2354,6 +2511,14 @@
 
           this.speechBubble.style.top = topPercent + '%';
           this.speechBubble.style.bottom = 'auto';
+        } else if (isMobile) {
+          // Mobile: use simple class, CSS handles positioning at bottom
+          this.speechBubble.className = 'speech-bubble pos-dynamic ' + randomAnim;
+          // Clear any inline styles - CSS will position at bottom
+          this.speechBubble.style.top = '';
+          this.speechBubble.style.bottom = '';
+          this.speechBubble.style.left = '';
+          this.speechBubble.style.right = '';
         } else {
           // Use fixed position class with random animation
           this.speechBubble.className = 'speech-bubble ' + position + ' ' + randomAnim;
