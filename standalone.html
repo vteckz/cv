@@ -234,6 +234,110 @@
       100% { opacity: 0; transform: translate(-50%, -80%) scale(0.8) rotate(0deg); }
     }
 
+    /* Connect Now button */
+    #connect-now-btn {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      padding: 18px 45px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, #a3e635, #65a30d);
+      color: #0a0a0f;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      z-index: 1001;
+      opacity: 0;
+      pointer-events: none;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 0 30px rgba(163, 230, 53, 0.4), 0 10px 40px rgba(0,0,0,0.3);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    #connect-now-btn:hover {
+      box-shadow: 0 0 50px rgba(163, 230, 53, 0.6), 0 15px 50px rgba(0,0,0,0.4);
+      transform: translate(-50%, -50%) scale(1.05);
+    }
+    #connect-now-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+      animation: connectBtnAnim 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    #connect-now-btn svg {
+      width: 22px;
+      height: 22px;
+    }
+    @keyframes connectBtnAnim {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+      100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    /* Persistent contact bubble */
+    #contact-persistent {
+      position: fixed;
+      top: 100px;
+      right: 30px;
+      background: rgba(10, 10, 15, 0.95);
+      backdrop-filter: blur(20px);
+      padding: 20px 25px;
+      border-radius: 16px;
+      border: 1px solid rgba(163, 230, 53, 0.3);
+      z-index: 900;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(30px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(163, 230, 53, 0.1);
+    }
+    #contact-persistent.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0);
+    }
+    #contact-persistent h4 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1rem;
+      color: #a3e635;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #contact-persistent h4 svg {
+      width: 18px;
+      height: 18px;
+    }
+    #contact-persistent .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.9);
+    }
+    #contact-persistent .contact-item:last-child {
+      margin-bottom: 0;
+    }
+    #contact-persistent .contact-item svg {
+      width: 16px;
+      height: 16px;
+      color: #a3e635;
+      flex-shrink: 0;
+    }
+    #contact-persistent a {
+      color: rgba(255,255,255,0.9);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    #contact-persistent a:hover {
+      color: #a3e635;
+    }
+
     /* Single page view - main page container */
     .page-stack {
       position: relative;
@@ -440,6 +544,36 @@
   </div>
 
   <div id="lets-go-popup">Let's Go! 🚀</div>
+
+  <a id="connect-now-btn" href="mailto:linton.evans@outlook.com?subject=Let's%20Connect%20-%20From%20Your%20Portfolio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+      <polyline points="22,6 12,13 2,6"></polyline>
+    </svg>
+    Connect Now
+  </a>
+
+  <div id="contact-persistent">
+    <h4>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+      </svg>
+      Get In Touch
+    </h4>
+    <div class="contact-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+        <polyline points="22,6 12,13 2,6"></polyline>
+      </svg>
+      <a href="mailto:linton.evans@outlook.com">linton.evans@outlook.com</a>
+    </div>
+    <div class="contact-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+      </svg>
+      <a href="tel:+64-21-939-505">+64-21-939-505</a>
+    </div>
+  </div>
 
   <div id="pdf-booklet">
     <div class="booklet-container">
@@ -1095,7 +1229,7 @@
         this.createPapersAndPen();
         this.setupPostProcessing();
         this.setupEvents();
-        await this.pdfBooklet.loadPDF('/Users/linton/Documents/Linton_EvansComplete_CV-Dec25.pdf') || await this.pdfBooklet.loadPDF('./cv.pdf');
+        await this.pdfBooklet.loadPDF('/Users/linton/Documents/Linton_EvansComplete_CV-Dec25-1.pdf') || await this.pdfBooklet.loadPDF('./cv.pdf');
         await this.simulateLoading();
         this.animate();
       }
@@ -1491,12 +1625,29 @@
             const elapsed = now - start;
             const t = Math.min(elapsed / duration, 1);
 
-            // Phase 1: Open lid (0 - 0.15)
-            if (t < 0.15) {
-              const lt = t / 0.15;
-              this.boxParts.glow.intensity = Math.sin(lt * Math.PI) * 3;
-              this.boxParts.lid.position.y = 0.75 + lt * 1.2;
-              this.boxParts.lid.rotation.x = -lt * Math.PI / 2.5;
+            // Phase 1: Open lid and fly off (0 - 0.25)
+            if (t < 0.25) {
+              const lt = t / 0.25;
+              this.boxParts.glow.intensity = Math.sin(Math.min(lt * 2, 1) * Math.PI) * 3;
+
+              if (lt < 0.4) {
+                // First part: lid opens
+                const openT = lt / 0.4;
+                this.boxParts.lid.position.y = 0.75 + openT * 1.2;
+                this.boxParts.lid.rotation.x = -openT * Math.PI / 2.5;
+              } else {
+                // Second part: lid flies off screen
+                const flyT = (lt - 0.4) / 0.6;
+                const flyEase = flyT * flyT; // accelerate
+                this.boxParts.lid.position.y = 1.95 + flyEase * 5;
+                this.boxParts.lid.position.z = flyEase * -3;
+                this.boxParts.lid.rotation.x = -Math.PI / 2.5 - flyEase * Math.PI;
+                this.boxParts.lid.material.opacity = 1 - flyT;
+                this.boxParts.lid.material.transparent = true;
+              }
+            } else {
+              // Hide lid completely after animation
+              this.boxParts.lid.visible = false;
             }
 
             // Phase 2: Papers fly out (0.12 - 0.4)
@@ -2087,9 +2238,21 @@
           const letsGoPopup = document.getElementById('lets-go-popup');
           letsGoPopup.classList.add('visible');
 
-          // Remove the class after animation completes
+          // Remove the class after animation completes, then show Connect Now button
           setTimeout(() => {
             letsGoPopup.classList.remove('visible');
+
+            // Show Connect Now button after Let's Go fades
+            setTimeout(() => {
+              const connectBtn = document.getElementById('connect-now-btn');
+              connectBtn.classList.add('visible');
+
+              // Show persistent contact bubble
+              setTimeout(() => {
+                const contactPersistent = document.getElementById('contact-persistent');
+                contactPersistent.classList.add('visible');
+              }, 800);
+            }, 300);
           }, 2500);
         }
 
