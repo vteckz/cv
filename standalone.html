@@ -1168,13 +1168,13 @@
         }
 
         // Zoom level 3 (ultra zoom - for small phone screens like Galaxy S25 cover display)
-        // This level allows the PDF to exceed viewport for maximum readability
-        let ultraWidth = baseWidth * 2.0;  // 2x base size
+        // Keep page fully visible but maximize width for readability
+        let ultraWidth = Math.min(baseWidth * 1.8, availWidth * 0.98);
         let ultraHeight = ultraWidth * this.pageAspect;
-        // On very small screens, allow even bigger for readability
-        if (isMobile && window.innerWidth <= 400) {
-          ultraWidth = baseWidth * 2.5;
-          ultraHeight = ultraWidth * this.pageAspect;
+        // Cap height to fit screen - ensure full page is visible
+        if (ultraHeight > maxAvailHeight) {
+          ultraHeight = maxAvailHeight;
+          ultraWidth = ultraHeight / this.pageAspect;
         }
 
         // Set CSS custom properties
