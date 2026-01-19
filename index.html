@@ -252,6 +252,13 @@
       width: var(--booklet-width-ultra, 800px);
       height: var(--booklet-height-ultra, 1100px);
     }
+    /* Temporary pinch-hold zoom beyond level 3 */
+    .booklet-container.temp-zoom {
+      transition: transform 0.1s ease-out !important;
+    }
+    .booklet-container.temp-zoom-release {
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    }
 
     /* Let's Go popup */
     #lets-go-popup {
@@ -1208,6 +1215,9 @@
         this.initialPinchDistance = 0;
         this.isPinching = false;
         this.lastPinchTime = 0;
+        this.tempZoomScale = 1;  // For hold-to-zoom beyond level 3
+        this.tempZoomActive = false;
+        this.pinchStartDistance = 0;  // Track distance when temp zoom starts
 
         // Use document-level listeners for more reliable touch capture on Samsung Internet
         const handleTouchStart = (e) => {
@@ -1223,6 +1233,11 @@
             this.isDragging = false;
             this.initialPinchDistance = this.getPinchDistance(e.touches);
             this.lastPinchTime = Date.now();
+
+            // If already at max zoom, prepare for temp zoom
+            if (this.zoomLevel === 3) {
+              this.pinchStartDistance = this.initialPinchDistance;
+            }
           } else if (e.touches.length === 1) {
             // Single touch - scroll only when zoomed
             if (this.zoomLevel === 0) return;
@@ -1247,6 +1262,9 @@
               this.isPinching = true;
               this.isDragging = false;
               this.initialPinchDistance = this.getPinchDistance(e.touches);
+              if (this.zoomLevel === 3) {
+                this.pinchStartDistance = this.initialPinchDistance;
+              }
               return;
             }
 
@@ -1257,16 +1275,36 @@
             const now = Date.now();
             const timeSinceLastPinch = now - this.lastPinchTime;
 
-            // Add debounce to prevent rapid zoom changes (300ms minimum between zooms)
-            if (timeSinceLastPinch > 300) {
+            // If at max zoom level (3), apply temporary transform zoom
+            if (this.zoomLevel === 3 && scale > 1.0) {
+              // Calculate temp zoom scale (max 2x additional zoom)
+              const tempScale = Math.min(scale, 2.0);
+              this.tempZoomScale = tempScale;
+              this.tempZoomActive = true;
+
+              // Apply transform scale for temporary zoom
+              this.bookletContainer.classList.add('temp-zoom');
+              this.bookletContainer.classList.remove('temp-zoom-release');
+              this.bookletContainer.style.transform = `translateY(var(--scroll-offset, 0px)) scale(${tempScale})`;
+            }
+            // Normal zoom level changes
+            else if (timeSinceLastPinch > 300) {
               if (scale > 1.05 && this.zoomLevel < 3) {
                 // Zoom in
                 this.zoomLevel++;
                 this.applyZoomLevel();
                 this.initialPinchDistance = currentDistance;
                 this.lastPinchTime = now;
+
+                // If just reached level 3, prepare for temp zoom
+                if (this.zoomLevel === 3) {
+                  this.pinchStartDistance = currentDistance;
+                }
               } else if (scale < 0.95 && this.zoomLevel > 0) {
-                // Zoom out
+                // Zoom out (also resets temp zoom)
+                if (this.tempZoomActive) {
+                  this.resetTempZoom();
+                }
                 this.zoomLevel--;
                 this.applyZoomLevel();
                 this.initialPinchDistance = currentDistance;
@@ -1289,6 +1327,12 @@
         const handleTouchEnd = (e) => {
           if (e.touches.length === 0) {
             this.isPinching = false;
+
+            // Reset temporary zoom with bounce animation
+            if (this.tempZoomActive) {
+              this.resetTempZoom();
+            }
+
             if (this.isDragging) {
               this.isDragging = false;
               this.animateBounceBack();
@@ -1296,6 +1340,12 @@
           } else if (e.touches.length === 1) {
             // Went from 2 fingers to 1 - reset to scroll mode
             this.isPinching = false;
+
+            // Reset temporary zoom
+            if (this.tempZoomActive) {
+              this.resetTempZoom();
+            }
+
             if (this.zoomLevel > 0) {
               this.isDragging = true;
               this.lastTouchY = e.touches[0].clientY;
@@ -1421,6 +1471,21 @@
       toggleZoom() {
         this.zoomLevel = (this.zoomLevel + 1) % 4;
         this.applyZoomLevel();
+      }
+
+      resetTempZoom() {
+        // Animate back to normal scale with bounce
+        this.bookletContainer.classList.remove('temp-zoom');
+        this.bookletContainer.classList.add('temp-zoom-release');
+        this.bookletContainer.style.transform = 'translateY(var(--scroll-offset, 0px)) scale(1)';
+
+        // Clean up after animation
+        setTimeout(() => {
+          this.bookletContainer.classList.remove('temp-zoom-release');
+          this.bookletContainer.style.transform = '';
+          this.tempZoomActive = false;
+          this.tempZoomScale = 1;
+        }, 300);
       }
 
       async loadPDF(url) {
