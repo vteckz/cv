@@ -248,6 +248,10 @@
       width: var(--booklet-width-max, 650px);
       height: var(--booklet-height-max, 900px);
     }
+    .booklet-container.zoomed-ultra {
+      width: var(--booklet-width-ultra, 800px);
+      height: var(--booklet-height-ultra, 1100px);
+    }
 
     /* Let's Go popup */
     #lets-go-popup {
@@ -403,7 +407,7 @@
       user-select: none;
     }
     .pdf-page:hover { box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 8px 20px rgba(0,0,0,0.4); }
-    .booklet-container.zoomed .pdf-page, .booklet-container.zoomed-max .pdf-page { cursor: zoom-out; }
+    .booklet-container.zoomed .pdf-page, .booklet-container.zoomed-max .pdf-page, .booklet-container.zoomed-ultra .pdf-page { cursor: zoom-out; }
     .pdf-page canvas {
       width: 100%;
       height: 100%;
@@ -636,7 +640,8 @@
     }
     /* Hide zoom hint when already zoomed */
     .booklet-container.zoomed ~ .zoom-hint,
-    .booklet-container.zoomed-max ~ .zoom-hint { display: none; }
+    .booklet-container.zoomed-max ~ .zoom-hint,
+    .booklet-container.zoomed-ultra ~ .zoom-hint { display: none; }
 
     /* ========== MOBILE RESPONSIVE STYLES ========== */
 
@@ -1162,6 +1167,16 @@
           maxWidth = maxHeight / this.pageAspect;
         }
 
+        // Zoom level 3 (ultra zoom - for small phone screens like Galaxy S25 cover display)
+        // This level allows the PDF to exceed viewport for maximum readability
+        let ultraWidth = baseWidth * 2.0;  // 2x base size
+        let ultraHeight = ultraWidth * this.pageAspect;
+        // On very small screens, allow even bigger for readability
+        if (isMobile && window.innerWidth <= 400) {
+          ultraWidth = baseWidth * 2.5;
+          ultraHeight = ultraWidth * this.pageAspect;
+        }
+
         // Set CSS custom properties
         const root = document.documentElement;
         root.style.setProperty('--booklet-width', `${baseWidth}px`);
@@ -1170,6 +1185,8 @@
         root.style.setProperty('--booklet-height-zoomed', `${zoomedHeight}px`);
         root.style.setProperty('--booklet-width-max', `${maxWidth}px`);
         root.style.setProperty('--booklet-height-max', `${maxHeight}px`);
+        root.style.setProperty('--booklet-width-ultra', `${ultraWidth}px`);
+        root.style.setProperty('--booklet-height-ultra', `${ultraHeight}px`);
 
         // Update internal dimensions for curl calculations
         this.pageWidth = baseWidth;
@@ -1242,7 +1259,7 @@
 
             // Add debounce to prevent rapid zoom changes (300ms minimum between zooms)
             if (timeSinceLastPinch > 300) {
-              if (scale > 1.05 && this.zoomLevel < 2) {
+              if (scale > 1.05 && this.zoomLevel < 3) {
                 // Zoom in
                 this.zoomLevel++;
                 this.applyZoomLevel();
@@ -1380,9 +1397,10 @@
       }
 
       applyZoomLevel() {
-        this.bookletContainer.classList.remove('zoomed', 'zoomed-max');
+        this.bookletContainer.classList.remove('zoomed', 'zoomed-max', 'zoomed-ultra');
         if (this.zoomLevel === 1) this.bookletContainer.classList.add('zoomed');
         else if (this.zoomLevel === 2) this.bookletContainer.classList.add('zoomed-max');
+        else if (this.zoomLevel === 3) this.bookletContainer.classList.add('zoomed-ultra');
 
         // Hide zoom hint when user zooms
         if (this.zoomLevel > 0) {
@@ -1401,7 +1419,7 @@
       }
 
       toggleZoom() {
-        this.zoomLevel = (this.zoomLevel + 1) % 3;
+        this.zoomLevel = (this.zoomLevel + 1) % 4;
         this.applyZoomLevel();
       }
 
@@ -2809,7 +2827,7 @@
           // Calculate the CV page boundaries
           // CV is centered, base width 450px * scale factor
           const zoomLevel = this.pdfBooklet.zoomLevel;
-          const scales = [1.25, 1.5, 1.9]; // default, zoomed, zoomed-max
+          const scales = [1.25, 1.5, 1.9, 2.5]; // default, zoomed, zoomed-max, zoomed-ultra
           const scale = scales[zoomLevel] || 1.25;
           const cvWidth = 450 * scale;
           const screenWidth = window.innerWidth;
