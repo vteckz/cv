@@ -1218,6 +1218,18 @@
         this.tempZoomScale = 1;  // For hold-to-zoom beyond level 3
         this.tempZoomActive = false;
         this.pinchStartDistance = 0;  // Track distance when temp zoom starts
+        this.tempPanX = 0;  // Temporary pan offset X
+        this.tempPanY = 0;  // Temporary pan offset Y
+        this.lastPinchCenterX = 0;  // Last pinch center for panning
+        this.lastPinchCenterY = 0;
+
+        // Helper to get pinch center point
+        const getPinchCenter = (touches) => {
+          return {
+            x: (touches[0].clientX + touches[1].clientX) / 2,
+            y: (touches[0].clientY + touches[1].clientY) / 2
+          };
+        };
 
         // Use document-level listeners for more reliable touch capture on Samsung Internet
         const handleTouchStart = (e) => {
@@ -1233,6 +1245,11 @@
             this.isDragging = false;
             this.initialPinchDistance = this.getPinchDistance(e.touches);
             this.lastPinchTime = Date.now();
+
+            // Track pinch center for panning
+            const center = getPinchCenter(e.touches);
+            this.lastPinchCenterX = center.x;
+            this.lastPinchCenterY = center.y;
 
             // If already at max zoom, prepare for temp zoom
             if (this.zoomLevel === 3) {
@@ -1257,11 +1274,16 @@
             e.stopPropagation();
             e.stopImmediatePropagation();
 
+            // Get current pinch center for panning
+            const center = getPinchCenter(e.touches);
+
             if (!this.isPinching) {
               // Just started second finger
               this.isPinching = true;
               this.isDragging = false;
               this.initialPinchDistance = this.getPinchDistance(e.touches);
+              this.lastPinchCenterX = center.x;
+              this.lastPinchCenterY = center.y;
               if (this.zoomLevel === 3) {
                 this.pinchStartDistance = this.initialPinchDistance;
               }
@@ -1275,17 +1297,27 @@
             const now = Date.now();
             const timeSinceLastPinch = now - this.lastPinchTime;
 
-            // If at max zoom level (3), apply temporary transform zoom
-            if (this.zoomLevel === 3 && scale > 1.0) {
-              // Calculate temp zoom scale (max 2x additional zoom)
-              const tempScale = Math.min(scale, 2.0);
+            // If at max zoom level (3), apply temporary transform zoom + panning
+            if (this.zoomLevel === 3 && (scale > 1.0 || this.tempZoomActive)) {
+              // Calculate temp zoom scale (max 2.5x additional zoom)
+              const tempScale = Math.max(1.0, Math.min(scale, 2.5));
               this.tempZoomScale = tempScale;
               this.tempZoomActive = true;
 
-              // Apply transform scale for temporary zoom
+              // Calculate pan offset based on finger movement
+              const panDeltaX = center.x - this.lastPinchCenterX;
+              const panDeltaY = center.y - this.lastPinchCenterY;
+              this.tempPanX += panDeltaX;
+              this.tempPanY += panDeltaY;
+
+              // Update last center
+              this.lastPinchCenterX = center.x;
+              this.lastPinchCenterY = center.y;
+
+              // Apply transform with scale and pan
               this.bookletContainer.classList.add('temp-zoom');
               this.bookletContainer.classList.remove('temp-zoom-release');
-              this.bookletContainer.style.transform = `translateY(var(--scroll-offset, 0px)) scale(${tempScale})`;
+              this.bookletContainer.style.transform = `translate(${this.tempPanX}px, ${this.tempPanY}px) scale(${tempScale})`;
             }
             // Normal zoom level changes
             else if (timeSinceLastPinch > 300) {
@@ -1299,6 +1331,8 @@
                 // If just reached level 3, prepare for temp zoom
                 if (this.zoomLevel === 3) {
                   this.pinchStartDistance = currentDistance;
+                  this.lastPinchCenterX = center.x;
+                  this.lastPinchCenterY = center.y;
                 }
               } else if (scale < 0.95 && this.zoomLevel > 0) {
                 // Zoom out (also resets temp zoom)
@@ -1474,10 +1508,10 @@
       }
 
       resetTempZoom() {
-        // Animate back to normal scale with bounce
+        // Animate back to normal scale and position with bounce
         this.bookletContainer.classList.remove('temp-zoom');
         this.bookletContainer.classList.add('temp-zoom-release');
-        this.bookletContainer.style.transform = 'translateY(var(--scroll-offset, 0px)) scale(1)';
+        this.bookletContainer.style.transform = 'translate(0px, 0px) scale(1)';
 
         // Clean up after animation
         setTimeout(() => {
@@ -1485,6 +1519,8 @@
           this.bookletContainer.style.transform = '';
           this.tempZoomActive = false;
           this.tempZoomScale = 1;
+          this.tempPanX = 0;
+          this.tempPanY = 0;
         }, 300);
       }
 
