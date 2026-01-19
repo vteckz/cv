@@ -210,6 +210,11 @@
       padding: 20px;
       opacity: 0;
       transition: opacity 0.6s ease;
+      /* Disable ALL browser touch handling - we manage it in JS */
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     #pdf-booklet.visible {
       display: flex;
@@ -230,8 +235,10 @@
       transform-style: preserve-3d;
       transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.15s ease-out;
       transform: translateY(var(--scroll-offset, 0px));
-      /* Allow our custom pinch-zoom, not the browser's */
-      touch-action: pan-y;
+      /* Disable ALL browser touch gestures - we handle them ourselves */
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     .booklet-container.zoomed {
       width: var(--booklet-width-zoomed, 550px);
@@ -390,6 +397,10 @@
       background: #fff; border-radius: 8px;
       box-shadow: 0 15px 50px rgba(0,0,0,0.6), 0 5px 15px rgba(0,0,0,0.3);
       overflow: hidden; cursor: zoom-in;
+      /* Disable browser touch gestures - parent handles everything */
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     .pdf-page:hover { box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 8px 20px rgba(0,0,0,0.4); }
     .booklet-container.zoomed .pdf-page, .booklet-container.zoomed-max .pdf-page { cursor: zoom-out; }
@@ -1179,14 +1190,22 @@
         // Touch scrolling and pinch-to-zoom
         this.initialPinchDistance = 0;
         this.isPinching = false;
+        this.lastPinchTime = 0;
 
-        this.container.addEventListener('touchstart', (e) => {
+        // Use document-level listeners for more reliable touch capture on Samsung Internet
+        const handleTouchStart = (e) => {
+          // Check if touch is within our container
+          if (!this.container.contains(e.target) && e.target !== this.container) return;
+
           if (e.touches.length === 2) {
-            // Start pinch zoom - prevent browser's default pinch behavior
+            // Start pinch zoom - prevent ALL default behavior
             e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             this.isPinching = true;
             this.isDragging = false;
             this.initialPinchDistance = this.getPinchDistance(e.touches);
+            this.lastPinchTime = Date.now();
           } else if (e.touches.length === 1) {
             // Single touch - scroll only when zoomed
             if (this.zoomLevel === 0) return;
@@ -1194,25 +1213,48 @@
             this.lastTouchY = e.touches[0].clientY;
             this.scrollVelocity = 0;
           }
-        }, { passive: false });
+        };
 
-        this.container.addEventListener('touchmove', (e) => {
-          if (e.touches.length === 2 && this.isPinching) {
-            // Handle pinch zoom
+        const handleTouchMove = (e) => {
+          // Check if touch is within our container
+          if (!this.container.contains(e.target) && e.target !== this.container) return;
+
+          if (e.touches.length === 2) {
+            // Handle pinch zoom - ALWAYS prevent default for 2-finger touch
             e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
+            if (!this.isPinching) {
+              // Just started second finger
+              this.isPinching = true;
+              this.isDragging = false;
+              this.initialPinchDistance = this.getPinchDistance(e.touches);
+              return;
+            }
+
             const currentDistance = this.getPinchDistance(e.touches);
             const scale = currentDistance / this.initialPinchDistance;
 
-            if (scale > 1.3 && this.zoomLevel < 2) {
-              // Zoom in
-              this.zoomLevel++;
-              this.applyZoomLevel();
-              this.initialPinchDistance = currentDistance;
-            } else if (scale < 0.7 && this.zoomLevel > 0) {
-              // Zoom out
-              this.zoomLevel--;
-              this.applyZoomLevel();
-              this.initialPinchDistance = currentDistance;
+            // Very low thresholds for Samsung Internet - just 5% change triggers zoom
+            const now = Date.now();
+            const timeSinceLastPinch = now - this.lastPinchTime;
+
+            // Add debounce to prevent rapid zoom changes (300ms minimum between zooms)
+            if (timeSinceLastPinch > 300) {
+              if (scale > 1.05 && this.zoomLevel < 2) {
+                // Zoom in
+                this.zoomLevel++;
+                this.applyZoomLevel();
+                this.initialPinchDistance = currentDistance;
+                this.lastPinchTime = now;
+              } else if (scale < 0.95 && this.zoomLevel > 0) {
+                // Zoom out
+                this.zoomLevel--;
+                this.applyZoomLevel();
+                this.initialPinchDistance = currentDistance;
+                this.lastPinchTime = now;
+              }
             }
           } else if (e.touches.length === 1 && this.isDragging && !this.isPinching) {
             // Single touch scroll
@@ -1225,9 +1267,9 @@
             this.lastTouchY = touchY;
             this.applyScroll();
           }
-        }, { passive: false });
+        };
 
-        this.container.addEventListener('touchend', (e) => {
+        const handleTouchEnd = (e) => {
           if (e.touches.length === 0) {
             this.isPinching = false;
             if (this.isDragging) {
@@ -1243,7 +1285,17 @@
               this.scrollVelocity = 0;
             }
           }
-        });
+        };
+
+        // Add listeners to both container AND document for better capture
+        this.container.addEventListener('touchstart', handleTouchStart, { passive: false, capture: true });
+        this.container.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
+        this.container.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+        // Also add document-level listeners as fallback for Samsung Internet
+        document.addEventListener('touchstart', handleTouchStart, { passive: false });
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd, { passive: false });
 
         // Mouse drag scrolling
         this.container.addEventListener('mousedown', (e) => {
