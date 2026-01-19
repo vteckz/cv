@@ -241,16 +241,13 @@
       user-select: none;
     }
     .booklet-container.zoomed {
-      width: var(--booklet-width-zoomed, 550px);
-      height: var(--booklet-height-zoomed, 760px);
+      transform: scale(var(--zoom-scale-1, 1.4)) translateY(var(--scroll-offset, 0px));
     }
     .booklet-container.zoomed-max {
-      width: var(--booklet-width-max, 650px);
-      height: var(--booklet-height-max, 900px);
+      transform: scale(var(--zoom-scale-2, 1.8)) translateY(var(--scroll-offset, 0px));
     }
     .booklet-container.zoomed-ultra {
-      width: var(--booklet-width-ultra, 800px);
-      height: var(--booklet-height-ultra, 1100px);
+      transform: scale(var(--zoom-scale-3, 2.2)) translateY(var(--scroll-offset, 0px));
     }
     /* Temporary pinch-hold zoom beyond level 3 */
     .booklet-container.temp-zoom {
@@ -1153,47 +1150,26 @@
           baseHeight = baseWidth * this.pageAspect;
         }
 
-        // On mobile, limit zoom levels more conservatively
-        const maxAvailHeight = availHeight * 0.95;
+        // Detect if desktop or mobile for different zoom strategies
+        const isDesktop = availWidth >= 1024;
 
-        // Zoom level 1 (zoomed)
-        let zoomedWidth = Math.min(baseWidth * 1.25, availWidth * 0.95);
-        let zoomedHeight = zoomedWidth * this.pageAspect;
-        // Cap height on mobile
-        if (zoomedHeight > maxAvailHeight) {
-          zoomedHeight = maxAvailHeight;
-          zoomedWidth = zoomedHeight / this.pageAspect;
-        }
-
-        // Zoom level 2 (max zoom)
-        let maxWidth = Math.min(baseWidth * 1.5, availWidth * 0.98);
-        let maxHeight = maxWidth * this.pageAspect;
-        // Cap height on mobile
-        if (maxHeight > maxAvailHeight) {
-          maxHeight = maxAvailHeight;
-          maxWidth = maxHeight / this.pageAspect;
-        }
-
-        // Zoom level 3 (ultra zoom - for small phone screens like Galaxy S25 cover display)
-        // Keep page fully visible but maximize width for readability
-        let ultraWidth = Math.min(baseWidth * 1.8, availWidth * 0.98);
-        let ultraHeight = ultraWidth * this.pageAspect;
-        // Cap height to fit screen - ensure full page is visible
-        if (ultraHeight > maxAvailHeight) {
-          ultraHeight = maxAvailHeight;
-          ultraWidth = ultraHeight / this.pageAspect;
-        }
-
-        // Set CSS custom properties
+        // Set CSS custom properties for base size
         const root = document.documentElement;
         root.style.setProperty('--booklet-width', `${baseWidth}px`);
         root.style.setProperty('--booklet-height', `${baseHeight}px`);
-        root.style.setProperty('--booklet-width-zoomed', `${zoomedWidth}px`);
-        root.style.setProperty('--booklet-height-zoomed', `${zoomedHeight}px`);
-        root.style.setProperty('--booklet-width-max', `${maxWidth}px`);
-        root.style.setProperty('--booklet-height-max', `${maxHeight}px`);
-        root.style.setProperty('--booklet-width-ultra', `${ultraWidth}px`);
-        root.style.setProperty('--booklet-height-ultra', `${ultraHeight}px`);
+
+        // Set zoom scale factors - use transform: scale() for actual zooming
+        // Desktop gets larger zoom levels since screens are bigger
+        if (isDesktop) {
+          root.style.setProperty('--zoom-scale-1', '1.4');
+          root.style.setProperty('--zoom-scale-2', '1.9');
+          root.style.setProperty('--zoom-scale-3', '2.4');
+        } else {
+          // Mobile - more conservative zoom
+          root.style.setProperty('--zoom-scale-1', '1.2');
+          root.style.setProperty('--zoom-scale-2', '1.5');
+          root.style.setProperty('--zoom-scale-3', '1.8');
+        }
 
         // Update internal dimensions for curl calculations
         this.pageWidth = baseWidth;
