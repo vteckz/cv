@@ -340,6 +340,25 @@
       pointer-events: auto;
       animation: connectBtnAnim 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     }
+    #connect-now-btn.stacked {
+      position: fixed;
+      top: auto;
+      left: auto;
+      bottom: 30px;
+      right: 30px;
+      transform: none;
+      animation: connectBtnStack 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      padding: 12px 20px;
+      font-size: 0.9rem;
+      z-index: 301;
+    }
+    #connect-now-btn.stacked:hover {
+      transform: translateY(-3px);
+    }
+    @keyframes connectBtnStack {
+      0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 1; transform: none; }
+    }
     #connect-now-btn svg {
       width: 22px;
       height: 22px;
@@ -609,9 +628,108 @@
     #zoom-btn { background: rgba(74,144,217,0.2); border-color: rgba(74,144,217,0.4); color: #4a90d9; }
     #zoom-btn.active { background: rgba(74,144,217,0.5); }
 
-    #view-cv-btn { position: absolute; top: 30px; left: 50%; transform: translateX(-50%); padding: 10px 24px; font-family: 'Space Grotesk', sans-serif; font-size: 0.9rem; background: rgba(10,10,15,0.8); backdrop-filter: blur(20px); border: 1px solid rgba(163,230,53,0.4); color: #a3e635; border-radius: 25px; cursor: pointer; display: none; }
+    #view-cv-btn { position: fixed; top: 30px; left: 30px; padding: 10px 24px; font-family: 'Space Grotesk', sans-serif; font-size: 0.9rem; background: rgba(10,10,15,0.8); backdrop-filter: blur(20px); border: 1px solid rgba(163,230,53,0.4); color: #a3e635; border-radius: 25px; cursor: pointer; display: none; z-index: 160; }
     #view-cv-btn.visible { display: block; }
     #view-cv-btn:hover { background: rgba(163,230,53,0.2); }
+
+    /* Page overview grid */
+    #page-overview {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 10, 15, 0.95);
+      backdrop-filter: blur(10px);
+      z-index: 300;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    #page-overview.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      max-width: 900px;
+      width: 100%;
+    }
+    .overview-page {
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      position: relative;
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    #page-overview.visible .overview-page {
+      opacity: 1;
+      transform: scale(1);
+    }
+    #page-overview.visible .overview-page:nth-child(1) { transition-delay: 0.05s; }
+    #page-overview.visible .overview-page:nth-child(2) { transition-delay: 0.1s; }
+    #page-overview.visible .overview-page:nth-child(3) { transition-delay: 0.15s; }
+    #page-overview.visible .overview-page:nth-child(4) { transition-delay: 0.2s; }
+    .overview-page:hover {
+      transform: scale(1.03);
+      box-shadow: 0 8px 40px rgba(163, 230, 53, 0.3);
+    }
+    .overview-page canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .overview-page-label {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 10, 15, 0.9);
+      color: #a3e635;
+      padding: 5px 15px;
+      border-radius: 15px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.8rem;
+    }
+    .overview-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(10,10,15,0.9);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transition: all 0.3s ease;
+      z-index: 310;
+    }
+    .overview-close:hover {
+      background: rgba(255,100,100,0.3);
+      transform: scale(1.1);
+    }
+    .overview-title {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #a3e635;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
 
     /* Zoom hint tooltip */
     .zoom-hint {
@@ -687,7 +805,9 @@
       .audio-btn { width: 38px; height: 38px; }
 
       #start-btn { padding: 14px 35px; font-size: 1rem; }
-      #view-cv-btn { top: 15px; padding: 8px 18px; font-size: 0.85rem; }
+      #view-cv-btn { top: 15px; left: 15px; padding: 8px 18px; font-size: 0.85rem; }
+      #page-overview { padding: 20px; }
+      .overview-grid { gap: 15px; max-width: 700px; }
 
       .speech-bubble { max-width: 240px; padding: 12px 16px; font-size: 0.85rem; }
       .speech-bubble p { font-size: 0.85rem; }
@@ -743,7 +863,12 @@
       .audio-btn svg { width: 16px; height: 16px; }
 
       #start-btn { padding: 12px 28px; font-size: 0.9rem; letter-spacing: 1px; }
-      #view-cv-btn { top: 10px; padding: 6px 14px; font-size: 0.8rem; }
+      #view-cv-btn { top: 10px; left: 10px; padding: 6px 14px; font-size: 0.8rem; }
+      #page-overview { padding: 15px; padding-top: 60px; }
+      .overview-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; max-width: 100%; }
+      .overview-page-label { font-size: 0.7rem; padding: 4px 10px; }
+      .overview-title { font-size: 1rem; top: 15px; }
+      .overview-close { top: 12px; right: 12px; width: 35px; height: 35px; }
 
       /* Speech bubbles - position at bottom on mobile */
       .speech-bubble {
@@ -833,17 +958,23 @@
       bottom: 30px;
       right: 30px;
       display: flex;
+      flex-direction: column;
       gap: 12px;
       z-index: 300;
       opacity: 0;
       pointer-events: none;
       transform: translateY(20px);
       transition: all 0.5s ease;
+      align-items: flex-end;
     }
     .action-buttons.visible {
       opacity: 1;
       pointer-events: auto;
       transform: translateY(0);
+    }
+    .action-buttons .btn-row {
+      display: flex;
+      gap: 12px;
     }
     .action-btn {
       padding: 12px 20px;
@@ -873,6 +1004,18 @@
     .action-btn.linkedin:hover { background: rgba(0, 119, 181, 0.2); }
     .action-btn.download { background: linear-gradient(135deg, var(--accent-color), var(--accent-dark)); color: #0a0a0f; border: none; }
     .action-btn.download:hover { transform: translateY(-3px) scale(1.05); }
+    .action-btn.connect { background: linear-gradient(135deg, var(--accent-color), var(--accent-dark)); color: #0a0a0f; border: none; }
+    .action-btn.connect:hover { transform: translateY(-3px) scale(1.05); }
+    .stacked-connect {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .stacked-connect.visible {
+      display: flex !important;
+      opacity: 1;
+      transform: translateY(0);
+    }
 
     /* ========== FLOATING ROBOT ASSISTANT ========== */
     #robot-assistant {
@@ -1110,6 +1253,9 @@
       cursor: pointer;
       z-index: 200;
     }
+    #robot-assistant.interactive .robot-message {
+      pointer-events: auto;
+    }
 
     /* Help options styling */
     .help-text {
@@ -1199,15 +1345,18 @@
 
     @media (max-width: 768px) {
       .theme-toggle { top: 15px; left: 15px; }
-      .action-buttons { bottom: 20px; right: 20px; flex-direction: column; }
+      .action-buttons { bottom: 20px; right: 20px; }
+      .action-buttons .btn-row { flex-direction: column; }
       .action-btn { padding: 10px 16px; font-size: 0.85rem; }
       #robot-assistant { display: none; }
     }
 
     @media (max-width: 480px) {
-      .action-buttons { bottom: 15px; right: 15px; left: 15px; flex-direction: row; justify-content: center; }
+      .action-buttons { bottom: 15px; right: 15px; left: 15px; align-items: center; }
+      .action-buttons .btn-row { flex-direction: row; justify-content: center; }
       .action-btn span { display: none; }
       .action-btn { padding: 12px; border-radius: 50%; }
+      .stacked-connect { border-radius: 50%; padding: 12px; }
     }
   </style>
 </head>
@@ -1250,22 +1399,31 @@
     </div>
   </div>
 
-  <!-- Action Buttons (LinkedIn, Download) -->
+  <!-- Action Buttons (LinkedIn, Download, and stacked Connect) -->
   <div class="action-buttons" id="action-buttons">
-    <a class="action-btn linkedin" href="https://www.linkedin.com/sharing/share-offsite/?url=https://vteckz.github.io/cv/" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-      </svg>
-      <span>Share</span>
-    </a>
-    <button class="action-btn download" id="download-cv-btn">
+    <a class="action-btn connect stacked-connect" id="stacked-connect-btn" href="mailto:linton.evans@outlook.com?subject=Let's%20Connect%20-%20From%20Your%20Portfolio" style="display: none;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-        <polyline points="7 10 12 15 17 10"></polyline>
-        <line x1="12" y1="15" x2="12" y2="3"></line>
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+        <polyline points="22,6 12,13 2,6"></polyline>
       </svg>
-      <span>Download CV</span>
-    </button>
+      <span>Connect Now</span>
+    </a>
+    <div class="btn-row">
+      <a class="action-btn linkedin" href="https://www.linkedin.com/sharing/share-offsite/?url=https://vteckz.github.io/cv/" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+        </svg>
+        <span>Share</span>
+      </a>
+      <button class="action-btn download" id="download-cv-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Download CV</span>
+      </button>
+    </div>
   </div>
 
   <div id="loading-screen">
@@ -1331,7 +1489,31 @@
 
   <div id="ui-overlay">
     <button id="start-btn">Open My CV</button>
-    <button id="view-cv-btn">View Full CV</button>
+    <button id="view-cv-btn">📄 All Pages</button>
+
+  <!-- Page Overview Grid -->
+  <div id="page-overview">
+    <button class="overview-close">✕</button>
+    <span class="overview-title">Select a Page</span>
+    <div class="overview-grid">
+      <div class="overview-page" data-page="1">
+        <canvas id="overview-canvas-1"></canvas>
+        <span class="overview-page-label">Page 1</span>
+      </div>
+      <div class="overview-page" data-page="2">
+        <canvas id="overview-canvas-2"></canvas>
+        <span class="overview-page-label">Page 2</span>
+      </div>
+      <div class="overview-page" data-page="3">
+        <canvas id="overview-canvas-3"></canvas>
+        <span class="overview-page-label">Page 3</span>
+      </div>
+      <div class="overview-page" data-page="4">
+        <canvas id="overview-canvas-4"></canvas>
+        <span class="overview-page-label">Page 4</span>
+      </div>
+    </div>
+  </div>
     <div class="audio-controls">
       <button class="audio-btn" id="skip-btn" title="Skip">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1577,9 +1759,20 @@
         document.getElementById('prev-page').addEventListener('click', () => this.prevPage());
         document.getElementById('next-page').addEventListener('click', () => this.nextPage());
         document.getElementById('close-booklet').addEventListener('click', () => this.hide());
-        document.getElementById('view-cv-btn').addEventListener('click', () => this.show());
+        document.getElementById('view-cv-btn').addEventListener('click', () => this.showPageOverview());
         document.getElementById('zoom-btn').addEventListener('click', () => this.toggleZoom());
         this.pageCurrent.addEventListener('click', () => this.toggleZoom());
+
+        // Page overview handlers
+        document.querySelector('.overview-close').addEventListener('click', () => this.hidePageOverview());
+        document.querySelectorAll('.overview-page').forEach(page => {
+          page.addEventListener('click', () => {
+            const pageNum = parseInt(page.dataset.page);
+            this.hidePageOverview();
+            this.show();
+            this.turnToPage(pageNum);
+          });
+        });
 
         // Setup scroll handlers
         this.setupScrollHandlers();
@@ -1587,6 +1780,58 @@
         // Calculate and set dynamic sizes
         this.calculateSizes();
         window.addEventListener('resize', () => this.calculateSizes());
+      }
+
+      async showPageOverview() {
+        const overview = document.getElementById('page-overview');
+        const centerConnectBtn = document.getElementById('connect-now-btn');
+        const stackedConnectBtn = document.getElementById('stacked-connect-btn');
+        const actionButtons = document.getElementById('action-buttons');
+
+        // If Connect Now button is visible (center), animate it to stack
+        if (centerConnectBtn && centerConnectBtn.classList.contains('visible')) {
+          // Hide center button
+          centerConnectBtn.style.opacity = '0';
+          centerConnectBtn.style.pointerEvents = 'none';
+
+          // Show stacked button with action buttons
+          if (!actionButtons.classList.contains('visible')) {
+            actionButtons.classList.add('visible');
+          }
+          stackedConnectBtn.style.display = 'flex';
+          setTimeout(() => {
+            stackedConnectBtn.classList.add('visible');
+          }, 50);
+        }
+
+        // Render all pages to overview canvases
+        for (let i = 1; i <= Math.min(4, this.totalPages); i++) {
+          const canvas = document.getElementById(`overview-canvas-${i}`);
+          if (canvas && this.pdfDoc) {
+            const page = await this.pdfDoc.getPage(i);
+            const vp = page.getViewport({ scale: 1 });
+            const scale = 300 / vp.width; // Scale to fit overview
+            const scaledVp = page.getViewport({ scale });
+            canvas.width = scaledVp.width;
+            canvas.height = scaledVp.height;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await page.render({ canvasContext: ctx, viewport: scaledVp }).promise;
+          }
+        }
+
+        // Hide any pages beyond what we have
+        for (let i = this.totalPages + 1; i <= 4; i++) {
+          const pageEl = document.querySelector(`.overview-page[data-page="${i}"]`);
+          if (pageEl) pageEl.style.display = 'none';
+        }
+
+        overview.classList.add('visible');
+      }
+
+      hidePageOverview() {
+        document.getElementById('page-overview').classList.remove('visible');
       }
 
       calculateSizes() {
@@ -2339,21 +2584,40 @@
       setupHoverInteraction() {
         if (this.hoverSetup) return;
         this.hoverSetup = true;
-        console.log('Setting up hover interaction on:', this.element);
 
-        this.element.addEventListener('mouseenter', () => {
-          console.log('Mouse entered robot, messagesHidden:', this.messagesHidden);
-          if (this.messagesHidden) {
+        let hideTimeout = null;
+
+        const showHelp = () => {
+          if (hideTimeout) {
+            clearTimeout(hideTimeout);
+            hideTimeout = null;
+          }
+          if (this.messagesHidden && this.messageEl.style.display !== 'block') {
             this.showTypingMessage("How can I help? 🤔");
           }
-        });
+        };
 
-        this.element.addEventListener('mouseleave', () => {
-          console.log('Mouse left robot');
-          if (this.messagesHidden && this.messageEl) {
-            this.messageEl.style.display = 'none';
+        const hideHelp = () => {
+          // Delay hiding to allow mouse to move to message bubble
+          hideTimeout = setTimeout(() => {
+            if (this.messagesHidden && this.messageEl) {
+              this.messageEl.style.display = 'none';
+            }
+          }, 300);
+        };
+
+        // Robot hover events
+        this.element.addEventListener('mouseenter', showHelp);
+        this.element.addEventListener('mouseleave', hideHelp);
+
+        // Message bubble hover events - keep it open when hovering over options
+        this.messageEl.addEventListener('mouseenter', () => {
+          if (hideTimeout) {
+            clearTimeout(hideTimeout);
+            hideTimeout = null;
           }
         });
+        this.messageEl.addEventListener('mouseleave', hideHelp);
       }
 
       showTypingMessage(text) {
