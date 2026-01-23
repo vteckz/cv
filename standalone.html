@@ -341,25 +341,11 @@
       animation: connectBtnAnim 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     }
     #connect-now-btn.sliding {
-      animation: connectBtnSlide 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-    }
-    @keyframes connectBtnSlide {
-      0% {
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) scale(1);
-        padding: 18px 45px;
-        font-size: 1.2rem;
-      }
-      100% {
-        top: auto;
-        bottom: 90px;
-        left: auto;
-        right: 30px;
-        transform: translate(0, 0) scale(1);
-        padding: 12px 20px;
-        font-size: 0.9rem;
-      }
+      transition: top 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  left 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  padding 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  font-size 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     #connect-now-btn.stacked {
       position: fixed;
@@ -367,13 +353,13 @@
       left: auto !important;
       bottom: 90px;
       right: 30px;
-      transform: none;
+      transform: translate(0, 0) scale(1) !important;
       padding: 12px 20px;
       font-size: 0.9rem;
       z-index: 301;
     }
     #connect-now-btn.stacked:hover {
-      transform: translateY(-3px);
+      transform: translateY(-3px) !important;
       box-shadow: 0 0 50px rgba(163, 230, 53, 0.6), 0 15px 50px rgba(0,0,0,0.4);
     }
     #connect-now-btn svg {
@@ -1822,18 +1808,43 @@
 
         // If Connect Now button is visible (center), animate it sliding to bottom
         if (connectBtn && connectBtn.classList.contains('visible') && !connectBtn.classList.contains('stacked')) {
-          // Add sliding animation class
+          // Get current position
+          const rect = connectBtn.getBoundingClientRect();
+
+          // Set explicit starting position using top/left (not transform)
+          connectBtn.style.top = rect.top + 'px';
+          connectBtn.style.left = rect.left + 'px';
+          connectBtn.style.transform = 'none';
+
+          // Force reflow
+          connectBtn.offsetHeight;
+
+          // Add sliding class for transition
           connectBtn.classList.add('sliding');
 
-          // After animation completes, switch to stacked state and show other buttons
+          // Calculate end position (bottom right)
+          const endTop = window.innerHeight - 90 - 44; // 90px from bottom, ~44px button height
+          const endLeft = window.innerWidth - 30 - 140; // 30px from right, ~140px button width
+
+          // Animate to end position
+          requestAnimationFrame(() => {
+            connectBtn.style.top = endTop + 'px';
+            connectBtn.style.left = endLeft + 'px';
+            connectBtn.style.padding = '12px 20px';
+            connectBtn.style.fontSize = '0.9rem';
+          });
+
+          // After animation completes, switch to stacked state
           setTimeout(() => {
             connectBtn.classList.remove('sliding');
             connectBtn.classList.add('stacked');
-            // Now show the action buttons after Connect has landed
-            if (!actionButtons.classList.contains('visible')) {
-              actionButtons.classList.add('visible');
-            }
-          }, 800);
+            // Clear inline styles, let CSS class take over
+            connectBtn.style.top = '';
+            connectBtn.style.left = '';
+            connectBtn.style.transform = '';
+            connectBtn.style.padding = '';
+            connectBtn.style.fontSize = '';
+          }, 850);
         }
 
         // Render all pages to overview canvases
