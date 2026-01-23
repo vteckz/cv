@@ -1822,18 +1822,17 @@
 
         // If Connect Now button is visible (center), animate it sliding to bottom
         if (connectBtn && connectBtn.classList.contains('visible') && !connectBtn.classList.contains('stacked')) {
-          // Show action buttons first so Connect slides to join them
-          if (!actionButtons.classList.contains('visible')) {
-            actionButtons.classList.add('visible');
-          }
-
           // Add sliding animation class
           connectBtn.classList.add('sliding');
 
-          // After animation completes, switch to stacked state
+          // After animation completes, switch to stacked state and show other buttons
           setTimeout(() => {
             connectBtn.classList.remove('sliding');
             connectBtn.classList.add('stacked');
+            // Now show the action buttons after Connect has landed
+            if (!actionButtons.classList.contains('visible')) {
+              actionButtons.classList.add('visible');
+            }
           }, 800);
         }
 
