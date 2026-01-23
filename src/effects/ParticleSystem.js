@@ -1,3 +1,14 @@
+/**
+ * Linton Evans - 3D Interactive CV Portfolio
+ * Copyright (c) 2025 Linton Evans. All rights reserved.
+ *
+ * This source code is proprietary and confidential.
+ * Unauthorized copying, modification, distribution, or use of this code,
+ * via any medium, is strictly prohibited without express written permission.
+ *
+ * Contact: linton.evans@outlook.com
+ */
+
 import * as THREE from 'three';
 
 export class ParticleSystem {
