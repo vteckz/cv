@@ -1,3 +1,13 @@
+<!--
+  Linton Evans - 3D Interactive CV Portfolio
+  Copyright (c) 2025 Linton Evans. All rights reserved.
+
+  This source code is proprietary and confidential.
+  Unauthorized copying, modification, distribution, or use of this code,
+  via any medium, is strictly prohibited without express written permission.
+
+  Contact: linton.evans@outlook.com
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2315,25 +2325,28 @@
       showTypingMessage(text) {
         if (!this.messageEl) return;
 
+        // Cancel any ongoing typing animation
+        if (this.typingTimeout) clearTimeout(this.typingTimeout);
+
         // Show the bubble first (empty)
         this.messageEl.style.display = 'block';
         this.messageEl.classList.add('static');
         this.messageEl.textContent = '';
 
-        // Type out the message character by character
+        // Type out the message character by character - faster and smoother
         let i = 0;
-        const typeSpeed = 50;
+        const typeSpeed = 25; // Faster typing
 
         const typeChar = () => {
           if (i < text.length) {
             this.messageEl.textContent += text.charAt(i);
             i++;
-            setTimeout(typeChar, typeSpeed);
+            this.typingTimeout = setTimeout(typeChar, typeSpeed);
           }
         };
 
-        // Start typing after a brief delay for bubble to appear
-        setTimeout(typeChar, 100);
+        // Start typing immediately
+        typeChar();
       }
     }
 
