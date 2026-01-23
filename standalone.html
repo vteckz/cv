@@ -632,7 +632,7 @@
     #view-cv-btn.visible { display: block; }
     #view-cv-btn:hover { background: rgba(163,230,53,0.2); }
 
-    /* Page overview grid */
+    /* Page overview - slide out animation */
     #page-overview {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -642,44 +642,66 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 40px;
       opacity: 0;
       visibility: hidden;
-      transition: opacity 0.3s ease, visibility 0.3s ease;
+      transition: opacity 0.4s ease, visibility 0.4s ease, background 0.4s ease;
     }
     #page-overview.visible {
       opacity: 1;
       visibility: visible;
     }
-    .overview-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-      max-width: 900px;
-      width: 100%;
+    #page-overview.collapsing {
+      background: transparent;
+      backdrop-filter: none;
+    }
+    .overview-container {
+      position: relative;
+      width: 800px;
+      height: 520px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     .overview-page {
+      position: absolute;
+      width: 180px;
       background: #fff;
       border-radius: 8px;
       overflow: hidden;
       cursor: pointer;
-      transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      position: relative;
-      opacity: 0;
-      transform: scale(0.9);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  box-shadow 0.3s ease,
+                  left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  opacity 0.3s ease;
+      z-index: 1;
     }
-    #page-overview.visible .overview-page {
+    /* Stacked state - all pages on top of each other */
+    .overview-page.stacked {
+      left: 50% !important;
+      transform: translateX(-50%) scale(0.95);
+      opacity: 0.3;
+    }
+    .overview-page.stacked:nth-child(1) { z-index: 4; opacity: 1; transform: translateX(-50%) scale(1); }
+    .overview-page.stacked:nth-child(2) { z-index: 3; transform: translateX(-50%) translateY(4px) scale(0.98); }
+    .overview-page.stacked:nth-child(3) { z-index: 2; transform: translateX(-50%) translateY(8px) scale(0.96); }
+    .overview-page.stacked:nth-child(4) { z-index: 1; transform: translateX(-50%) translateY(12px) scale(0.94); }
+    /* Spread state - pages fan out */
+    .overview-page.spread {
       opacity: 1;
-      transform: scale(1);
+      z-index: 1;
     }
-    #page-overview.visible .overview-page:nth-child(1) { transition-delay: 0.05s; }
-    #page-overview.visible .overview-page:nth-child(2) { transition-delay: 0.1s; }
-    #page-overview.visible .overview-page:nth-child(3) { transition-delay: 0.15s; }
-    #page-overview.visible .overview-page:nth-child(4) { transition-delay: 0.2s; }
+    .overview-page.spread:nth-child(1) { left: 0; transform: translateX(0) scale(1); transition-delay: 0s; }
+    .overview-page.spread:nth-child(2) { left: 210px; transform: translateX(0) scale(1); transition-delay: 0.05s; }
+    .overview-page.spread:nth-child(3) { left: 420px; transform: translateX(0) scale(1); transition-delay: 0.1s; }
+    .overview-page.spread:nth-child(4) { left: 630px; transform: translateX(0) scale(1); transition-delay: 0.15s; }
     .overview-page:hover {
-      transform: scale(1.03);
-      box-shadow: 0 8px 40px rgba(163, 230, 53, 0.3);
+      transform: translateX(0) scale(1.08) !important;
+      box-shadow: 0 0 40px rgba(255, 255, 255, 0.5), 0 8px 30px rgba(0,0,0,0.4);
+      z-index: 10 !important;
+    }
+    .overview-page.stacked:hover {
+      transform: translateX(-50%) scale(1.05) !important;
     }
     .overview-page canvas {
       width: 100%;
@@ -688,7 +710,7 @@
     }
     .overview-page-label {
       position: absolute;
-      bottom: 10px;
+      bottom: 8px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(10, 10, 15, 0.9);
@@ -807,7 +829,10 @@
       #start-btn { padding: 14px 35px; font-size: 1rem; }
       #view-cv-btn { top: 15px; left: 15px; padding: 8px 18px; font-size: 0.85rem; }
       #page-overview { padding: 20px; }
-      .overview-grid { gap: 15px; max-width: 700px; }
+      .overview-container { width: 100%; height: auto; flex-wrap: wrap; justify-content: center; gap: 15px; }
+      .overview-page { position: relative !important; width: 140px; left: auto !important; }
+      .overview-page.stacked, .overview-page.spread { transform: none !important; left: auto !important; opacity: 1 !important; }
+      .overview-page:hover { transform: scale(1.05) !important; }
 
       .speech-bubble { max-width: 240px; padding: 12px 16px; font-size: 0.85rem; }
       .speech-bubble p { font-size: 0.85rem; }
@@ -865,7 +890,10 @@
       #start-btn { padding: 12px 28px; font-size: 0.9rem; letter-spacing: 1px; }
       #view-cv-btn { top: 10px; left: 10px; padding: 6px 14px; font-size: 0.8rem; }
       #page-overview { padding: 15px; padding-top: 60px; }
-      .overview-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; max-width: 100%; }
+      .overview-container { width: 100%; height: auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+      .overview-page { position: relative !important; width: calc(50% - 10px); max-width: 150px; left: auto !important; }
+      .overview-page.stacked, .overview-page.spread { transform: none !important; left: auto !important; opacity: 1 !important; }
+      .overview-page:hover { transform: scale(1.03) !important; }
       .overview-page-label { font-size: 0.7rem; padding: 4px 10px; }
       .overview-title { font-size: 1rem; top: 15px; }
       .overview-close { top: 12px; right: 12px; width: 35px; height: 35px; }
@@ -1489,26 +1517,26 @@
 
   <div id="ui-overlay">
     <button id="start-btn">Open My CV</button>
-    <button id="view-cv-btn">📄 All Pages</button>
+    <button id="view-cv-btn">📄 View Full CV</button>
 
-  <!-- Page Overview Grid -->
+  <!-- Page Overview - Slide Out Animation -->
   <div id="page-overview">
     <button class="overview-close">✕</button>
     <span class="overview-title">Select a Page</span>
-    <div class="overview-grid">
-      <div class="overview-page" data-page="1">
+    <div class="overview-container">
+      <div class="overview-page stacked" data-page="1">
         <canvas id="overview-canvas-1"></canvas>
         <span class="overview-page-label">Page 1</span>
       </div>
-      <div class="overview-page" data-page="2">
+      <div class="overview-page stacked" data-page="2">
         <canvas id="overview-canvas-2"></canvas>
         <span class="overview-page-label">Page 2</span>
       </div>
-      <div class="overview-page" data-page="3">
+      <div class="overview-page stacked" data-page="3">
         <canvas id="overview-canvas-3"></canvas>
         <span class="overview-page-label">Page 3</span>
       </div>
-      <div class="overview-page" data-page="4">
+      <div class="overview-page stacked" data-page="4">
         <canvas id="overview-canvas-4"></canvas>
         <span class="overview-page-label">Page 4</span>
       </div>
@@ -1768,9 +1796,13 @@
         document.querySelectorAll('.overview-page').forEach(page => {
           page.addEventListener('click', () => {
             const pageNum = parseInt(page.dataset.page);
-            this.hidePageOverview();
-            this.show();
-            this.turnToPage(pageNum);
+            // Collapse animation then navigate
+            this.hidePageOverview(pageNum);
+            // Wait for collapse animation then show the page
+            setTimeout(() => {
+              this.show();
+              this.turnToPage(pageNum);
+            }, 500);
           });
         });
 
@@ -1787,11 +1819,14 @@
         const centerConnectBtn = document.getElementById('connect-now-btn');
         const stackedConnectBtn = document.getElementById('stacked-connect-btn');
         const actionButtons = document.getElementById('action-buttons');
+        const pages = document.querySelectorAll('.overview-page');
 
         // If Connect Now button is visible (center), animate it to stack
         if (centerConnectBtn && centerConnectBtn.classList.contains('visible')) {
-          // Hide center button
+          // Hide center button with animation
+          centerConnectBtn.style.transition = 'opacity 0.3s ease, transform 0.5s ease';
           centerConnectBtn.style.opacity = '0';
+          centerConnectBtn.style.transform = 'translate(-50%, -50%) scale(0.5)';
           centerConnectBtn.style.pointerEvents = 'none';
 
           // Show stacked button with action buttons
@@ -1810,7 +1845,7 @@
           if (canvas && this.pdfDoc) {
             const page = await this.pdfDoc.getPage(i);
             const vp = page.getViewport({ scale: 1 });
-            const scale = 300 / vp.width; // Scale to fit overview
+            const scale = 180 / vp.width; // Scale to fit overview page width
             const scaledVp = page.getViewport({ scale });
             canvas.width = scaledVp.width;
             canvas.height = scaledVp.height;
@@ -1827,11 +1862,43 @@
           if (pageEl) pageEl.style.display = 'none';
         }
 
+        // Reset pages to stacked state first
+        pages.forEach(page => {
+          page.classList.remove('spread');
+          page.classList.add('stacked');
+        });
+
+        // Show overview
         overview.classList.add('visible');
+        overview.classList.remove('collapsing');
+
+        // Animate pages spreading out after a short delay
+        setTimeout(() => {
+          pages.forEach(page => {
+            page.classList.remove('stacked');
+            page.classList.add('spread');
+          });
+        }, 100);
       }
 
-      hidePageOverview() {
-        document.getElementById('page-overview').classList.remove('visible');
+      hidePageOverview(selectedPage = null) {
+        const overview = document.getElementById('page-overview');
+        const pages = document.querySelectorAll('.overview-page');
+
+        // Animate pages collapsing back to stack
+        pages.forEach(page => {
+          page.classList.remove('spread');
+          page.classList.add('stacked');
+        });
+
+        // Add collapsing class for transparent background
+        overview.classList.add('collapsing');
+
+        // Hide overview after animation
+        setTimeout(() => {
+          overview.classList.remove('visible');
+          overview.classList.remove('collapsing');
+        }, 500);
       }
 
       calculateSizes() {
