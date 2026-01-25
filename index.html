@@ -278,6 +278,13 @@
     .booklet-container.temp-zoom-release {
       transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     }
+    /* Mobile smooth pinch zoom */
+    .booklet-container.pinch-zoom {
+      transition: none !important;
+    }
+    .booklet-container.pinch-zoom-release {
+      transition: transform 0.3s ease-out !important;
+    }
 
     /* Let's Go popup */
     #lets-go-popup {
@@ -1490,7 +1497,7 @@
       <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <polyline points="15 18 9 12 15 6"></polyline>
       </svg>
-      <span class="hint-text"><strong>Click page</strong> to zoom in</span>
+      <span class="hint-text" id="zoom-hint-text"><strong>Click page</strong> to zoom in</span>
     </div>
     <button class="booklet-close" id="close-booklet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     <div class="booklet-nav">
@@ -1769,13 +1776,31 @@
         this.maxScroll = 200;
         this.isDragging = false;
         this.lastTouchY = 0;
+        this.lastTouchX = 0;
+
+        // Detect touch device for mobile-specific zoom behavior
+        this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+        // Mobile smooth pinch zoom state
+        this.mobilePinchScale = 1;
+        this.mobilePanX = 0;
+        this.mobilePanY = 0;
 
         document.getElementById('prev-page').addEventListener('click', () => this.prevPage());
         document.getElementById('next-page').addEventListener('click', () => this.nextPage());
         document.getElementById('close-booklet').addEventListener('click', () => this.hide());
         document.getElementById('view-cv-btn').addEventListener('click', () => this.showPageOverview());
         document.getElementById('zoom-btn').addEventListener('click', () => this.toggleZoom());
-        this.pageCurrent.addEventListener('click', () => this.toggleZoom());
+        // Only enable click-to-zoom on non-touch (desktop) devices
+        if (!this.isTouchDevice) {
+          this.pageCurrent.addEventListener('click', () => this.toggleZoom());
+        }
+
+        // Update zoom hint text for touch devices
+        if (this.isTouchDevice) {
+          const hintText = document.getElementById('zoom-hint-text');
+          if (hintText) hintText.innerHTML = '<strong>Pinch</strong> to zoom in';
+        }
 
         // Page overview handlers
         document.querySelector('.overview-close').addEventListener('click', () => this.hidePageOverview());
@@ -1970,188 +1995,254 @@
         this.initialPinchDistance = 0;
         this.isPinching = false;
         this.lastPinchTime = 0;
-        this.tempZoomScale = 1;  // For hold-to-zoom beyond level 3
+        this.tempZoomScale = 1;
         this.tempZoomActive = false;
-        this.pinchStartDistance = 0;  // Track distance when temp zoom starts
-        this.tempPanX = 0;  // Temporary pan offset X
-        this.tempPanY = 0;  // Temporary pan offset Y
-        this.lastPinchCenterX = 0;  // Last pinch center for panning
+        this.pinchStartDistance = 0;
+        this.tempPanX = 0;
+        this.tempPanY = 0;
+        this.lastPinchCenterX = 0;
         this.lastPinchCenterY = 0;
 
-        // Helper to get pinch center point
-        const getPinchCenter = (touches) => {
-          return {
-            x: (touches[0].clientX + touches[1].clientX) / 2,
-            y: (touches[0].clientY + touches[1].clientY) / 2
-          };
-        };
+        const getPinchCenter = (touches) => ({
+          x: (touches[0].clientX + touches[1].clientX) / 2,
+          y: (touches[0].clientY + touches[1].clientY) / 2
+        });
 
-        // Use document-level listeners for more reliable touch capture on Samsung Internet
-        const handleTouchStart = (e) => {
-          // Check if touch is within our container
-          if (!this.container.contains(e.target) && e.target !== this.container) return;
+        if (this.isTouchDevice) {
+          // === MOBILE: Smooth continuous pinch-to-zoom ===
+          const handleTouchStart = (e) => {
+            if (!this.container.contains(e.target) && e.target !== this.container) return;
 
-          if (e.touches.length === 2) {
-            // Start pinch zoom - prevent ALL default behavior
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            this.isPinching = true;
-            this.isDragging = false;
-            this.initialPinchDistance = this.getPinchDistance(e.touches);
-            this.lastPinchTime = Date.now();
-
-            // Track pinch center for panning
-            const center = getPinchCenter(e.touches);
-            this.lastPinchCenterX = center.x;
-            this.lastPinchCenterY = center.y;
-
-            // If already at max zoom, prepare for temp zoom
-            if (this.zoomLevel === 3) {
-              this.pinchStartDistance = this.initialPinchDistance;
-            }
-          } else if (e.touches.length === 1) {
-            // Single touch - scroll only when zoomed
-            if (this.zoomLevel === 0) return;
-            this.isDragging = true;
-            this.lastTouchY = e.touches[0].clientY;
-            this.scrollVelocity = 0;
-          }
-        };
-
-        const handleTouchMove = (e) => {
-          // Check if touch is within our container
-          if (!this.container.contains(e.target) && e.target !== this.container) return;
-
-          if (e.touches.length === 2) {
-            // Handle pinch zoom - ALWAYS prevent default for 2-finger touch
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-
-            // Get current pinch center for panning
-            const center = getPinchCenter(e.touches);
-
-            if (!this.isPinching) {
-              // Just started second finger
+            if (e.touches.length === 2) {
+              e.preventDefault();
+              e.stopPropagation();
               this.isPinching = true;
               this.isDragging = false;
               this.initialPinchDistance = this.getPinchDistance(e.touches);
+
+              const center = getPinchCenter(e.touches);
               this.lastPinchCenterX = center.x;
               this.lastPinchCenterY = center.y;
-              if (this.zoomLevel === 3) {
-                this.pinchStartDistance = this.initialPinchDistance;
-              }
-              return;
+            } else if (e.touches.length === 1) {
+              // Single touch pan when zoomed in
+              if (this.mobilePinchScale <= 1) return;
+              this.isDragging = true;
+              this.lastTouchY = e.touches[0].clientY;
+              this.lastTouchX = e.touches[0].clientX;
+              this.scrollVelocity = 0;
             }
+          };
 
-            const currentDistance = this.getPinchDistance(e.touches);
-            const scale = currentDistance / this.initialPinchDistance;
+          const handleTouchMove = (e) => {
+            if (!this.container.contains(e.target) && e.target !== this.container) return;
 
-            // Very low thresholds for Samsung Internet - just 5% change triggers zoom
-            const now = Date.now();
-            const timeSinceLastPinch = now - this.lastPinchTime;
+            if (e.touches.length === 2) {
+              e.preventDefault();
+              e.stopPropagation();
 
-            // If at max zoom level (3), apply temporary transform zoom + panning
-            if (this.zoomLevel === 3 && (scale > 1.0 || this.tempZoomActive)) {
-              // Calculate temp zoom scale (max 2.5x additional zoom)
-              const tempScale = Math.max(1.0, Math.min(scale, 2.5));
-              this.tempZoomScale = tempScale;
-              this.tempZoomActive = true;
+              const center = getPinchCenter(e.touches);
 
-              // Calculate pan offset based on finger movement
+              if (!this.isPinching) {
+                this.isPinching = true;
+                this.isDragging = false;
+                this.initialPinchDistance = this.getPinchDistance(e.touches);
+                this.lastPinchCenterX = center.x;
+                this.lastPinchCenterY = center.y;
+                return;
+              }
+
+              const currentDistance = this.getPinchDistance(e.touches);
+              const pinchDelta = currentDistance / this.initialPinchDistance;
+
+              // Calculate new scale (clamp between 1 and 3.5)
+              const newScale = Math.max(1, Math.min(this.mobilePinchScale * pinchDelta, 3.5));
+
+              // Pan with fingers
               const panDeltaX = center.x - this.lastPinchCenterX;
               const panDeltaY = center.y - this.lastPinchCenterY;
-              this.tempPanX += panDeltaX;
-              this.tempPanY += panDeltaY;
+              this.mobilePanX += panDeltaX;
+              this.mobilePanY += panDeltaY;
 
-              // Update last center
               this.lastPinchCenterX = center.x;
               this.lastPinchCenterY = center.y;
+              this.initialPinchDistance = currentDistance;
 
-              // Apply transform with scale and pan
-              this.bookletContainer.classList.add('temp-zoom');
-              this.bookletContainer.classList.remove('temp-zoom-release');
-              this.bookletContainer.style.transform = `translate(${this.tempPanX}px, ${this.tempPanY}px) scale(${tempScale})`;
+              this.mobilePinchScale = newScale;
+              this.applyMobileZoom();
+            } else if (e.touches.length === 1 && this.isDragging && !this.isPinching) {
+              // Single finger pan when zoomed
+              if (this.mobilePinchScale <= 1) return;
+              e.preventDefault();
+              const touchX = e.touches[0].clientX;
+              const touchY = e.touches[0].clientY;
+              this.mobilePanX += touchX - this.lastTouchX;
+              this.mobilePanY += touchY - this.lastTouchY;
+              this.lastTouchX = touchX;
+              this.lastTouchY = touchY;
+              this.applyMobileZoom();
             }
-            // Normal zoom level changes
-            else if (timeSinceLastPinch > 300) {
-              if (scale > 1.05 && this.zoomLevel < 3) {
-                // Zoom in
-                this.zoomLevel++;
-                this.applyZoomLevel();
-                this.initialPinchDistance = currentDistance;
-                this.lastPinchTime = now;
+          };
 
-                // If just reached level 3, prepare for temp zoom
-                if (this.zoomLevel === 3) {
-                  this.pinchStartDistance = currentDistance;
-                  this.lastPinchCenterX = center.x;
-                  this.lastPinchCenterY = center.y;
-                }
-              } else if (scale < 0.95 && this.zoomLevel > 0) {
-                // Zoom out (also resets temp zoom)
-                if (this.tempZoomActive) {
-                  this.resetTempZoom();
-                }
-                this.zoomLevel--;
+          const handleTouchEnd = (e) => {
+            if (e.touches.length === 0) {
+              this.isPinching = false;
+              this.isDragging = false;
+
+              // If zoomed out below 1, snap back to 1
+              if (this.mobilePinchScale < 1.05) {
+                this.mobilePinchScale = 1;
+                this.mobilePanX = 0;
+                this.mobilePanY = 0;
+                this.bookletContainer.classList.add('pinch-zoom-release');
+                this.bookletContainer.classList.remove('pinch-zoom');
+                this.bookletContainer.style.transform = '';
+                setTimeout(() => {
+                  this.bookletContainer.classList.remove('pinch-zoom-release');
+                }, 300);
+
+                // Update zoom state
+                this.zoomLevel = 0;
                 this.applyZoomLevel();
-                this.initialPinchDistance = currentDistance;
-                this.lastPinchTime = now;
+              } else {
+                // Clamp pan so page stays within view
+                this.clampMobilePan();
+                this.applyMobileZoom();
+
+                // Set zoomLevel so other parts of the code know we're zoomed
+                if (this.mobilePinchScale > 1) {
+                  this.zoomLevel = 1; // Signal zoomed state
+                  document.getElementById('zoom-hint').classList.remove('visible');
+                  document.getElementById('zoom-btn').classList.add('active');
+                }
+              }
+            } else if (e.touches.length === 1) {
+              this.isPinching = false;
+              if (this.mobilePinchScale > 1) {
+                this.isDragging = true;
+                this.lastTouchX = e.touches[0].clientX;
+                this.lastTouchY = e.touches[0].clientY;
               }
             }
-          } else if (e.touches.length === 1 && this.isDragging && !this.isPinching) {
-            // Single touch scroll
-            if (this.zoomLevel === 0) return;
-            e.preventDefault();
-            const touchY = e.touches[0].clientY;
-            const delta = this.lastTouchY - touchY;
-            this.scrollVelocity = delta;
-            this.scrollOffset += delta;
-            this.lastTouchY = touchY;
-            this.applyScroll();
-          }
-        };
+          };
 
-        const handleTouchEnd = (e) => {
-          if (e.touches.length === 0) {
-            this.isPinching = false;
+          this.container.addEventListener('touchstart', handleTouchStart, { passive: false, capture: true });
+          this.container.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
+          this.container.addEventListener('touchend', handleTouchEnd, { passive: false });
+          document.addEventListener('touchstart', handleTouchStart, { passive: false });
+          document.addEventListener('touchmove', handleTouchMove, { passive: false });
+          document.addEventListener('touchend', handleTouchEnd, { passive: false });
 
-            // Reset temporary zoom with bounce animation
-            if (this.tempZoomActive) {
-              this.resetTempZoom();
-            }
-
-            if (this.isDragging) {
+        } else {
+          // === DESKTOP: Original discrete zoom level behavior ===
+          const handleTouchStart = (e) => {
+            if (!this.container.contains(e.target) && e.target !== this.container) return;
+            if (e.touches.length === 2) {
+              e.preventDefault();
+              this.isPinching = true;
               this.isDragging = false;
-              this.animateBounceBack();
-            }
-          } else if (e.touches.length === 1) {
-            // Went from 2 fingers to 1 - reset to scroll mode
-            this.isPinching = false;
-
-            // Reset temporary zoom
-            if (this.tempZoomActive) {
-              this.resetTempZoom();
-            }
-
-            if (this.zoomLevel > 0) {
+              this.initialPinchDistance = this.getPinchDistance(e.touches);
+              this.lastPinchTime = Date.now();
+              const center = getPinchCenter(e.touches);
+              this.lastPinchCenterX = center.x;
+              this.lastPinchCenterY = center.y;
+              if (this.zoomLevel === 3) this.pinchStartDistance = this.initialPinchDistance;
+            } else if (e.touches.length === 1) {
+              if (this.zoomLevel === 0) return;
               this.isDragging = true;
               this.lastTouchY = e.touches[0].clientY;
               this.scrollVelocity = 0;
             }
-          }
-        };
+          };
 
-        // Add listeners to both container AND document for better capture
-        this.container.addEventListener('touchstart', handleTouchStart, { passive: false, capture: true });
-        this.container.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
-        this.container.addEventListener('touchend', handleTouchEnd, { passive: false });
+          const handleTouchMove = (e) => {
+            if (!this.container.contains(e.target) && e.target !== this.container) return;
+            if (e.touches.length === 2) {
+              e.preventDefault();
+              const center = getPinchCenter(e.touches);
+              if (!this.isPinching) {
+                this.isPinching = true;
+                this.isDragging = false;
+                this.initialPinchDistance = this.getPinchDistance(e.touches);
+                this.lastPinchCenterX = center.x;
+                this.lastPinchCenterY = center.y;
+                if (this.zoomLevel === 3) this.pinchStartDistance = this.initialPinchDistance;
+                return;
+              }
+              const currentDistance = this.getPinchDistance(e.touches);
+              const scale = currentDistance / this.initialPinchDistance;
+              const now = Date.now();
+              const timeSinceLastPinch = now - this.lastPinchTime;
 
-        // Also add document-level listeners as fallback for Samsung Internet
-        document.addEventListener('touchstart', handleTouchStart, { passive: false });
-        document.addEventListener('touchmove', handleTouchMove, { passive: false });
-        document.addEventListener('touchend', handleTouchEnd, { passive: false });
+              if (this.zoomLevel === 3 && (scale > 1.0 || this.tempZoomActive)) {
+                const tempScale = Math.max(1.0, Math.min(scale, 2.5));
+                this.tempZoomScale = tempScale;
+                this.tempZoomActive = true;
+                const panDeltaX = center.x - this.lastPinchCenterX;
+                const panDeltaY = center.y - this.lastPinchCenterY;
+                this.tempPanX += panDeltaX;
+                this.tempPanY += panDeltaY;
+                this.lastPinchCenterX = center.x;
+                this.lastPinchCenterY = center.y;
+                this.bookletContainer.classList.add('temp-zoom');
+                this.bookletContainer.classList.remove('temp-zoom-release');
+                this.bookletContainer.style.transform = `translate(${this.tempPanX}px, ${this.tempPanY}px) scale(${tempScale})`;
+              } else if (timeSinceLastPinch > 300) {
+                if (scale > 1.05 && this.zoomLevel < 3) {
+                  this.zoomLevel++;
+                  this.applyZoomLevel();
+                  this.initialPinchDistance = currentDistance;
+                  this.lastPinchTime = now;
+                  if (this.zoomLevel === 3) {
+                    this.pinchStartDistance = currentDistance;
+                    this.lastPinchCenterX = center.x;
+                    this.lastPinchCenterY = center.y;
+                  }
+                } else if (scale < 0.95 && this.zoomLevel > 0) {
+                  if (this.tempZoomActive) this.resetTempZoom();
+                  this.zoomLevel--;
+                  this.applyZoomLevel();
+                  this.initialPinchDistance = currentDistance;
+                  this.lastPinchTime = now;
+                }
+              }
+            } else if (e.touches.length === 1 && this.isDragging && !this.isPinching) {
+              if (this.zoomLevel === 0) return;
+              e.preventDefault();
+              const touchY = e.touches[0].clientY;
+              const delta = this.lastTouchY - touchY;
+              this.scrollVelocity = delta;
+              this.scrollOffset += delta;
+              this.lastTouchY = touchY;
+              this.applyScroll();
+            }
+          };
+
+          const handleTouchEnd = (e) => {
+            if (e.touches.length === 0) {
+              this.isPinching = false;
+              if (this.tempZoomActive) this.resetTempZoom();
+              if (this.isDragging) {
+                this.isDragging = false;
+                this.animateBounceBack();
+              }
+            } else if (e.touches.length === 1) {
+              this.isPinching = false;
+              if (this.tempZoomActive) this.resetTempZoom();
+              if (this.zoomLevel > 0) {
+                this.isDragging = true;
+                this.lastTouchY = e.touches[0].clientY;
+                this.scrollVelocity = 0;
+              }
+            }
+          };
+
+          this.container.addEventListener('touchstart', handleTouchStart, { passive: false, capture: true });
+          this.container.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
+          this.container.addEventListener('touchend', handleTouchEnd, { passive: false });
+          document.addEventListener('touchstart', handleTouchStart, { passive: false });
+          document.addEventListener('touchmove', handleTouchMove, { passive: false });
+          document.addEventListener('touchend', handleTouchEnd, { passive: false });
+        }
 
         // Mouse drag scrolling
         this.container.addEventListener('mousedown', (e) => {
@@ -2258,7 +2349,43 @@
       }
 
       toggleZoom() {
+        if (this.isTouchDevice) {
+          // Mobile: toggle between no zoom and reset
+          if (this.mobilePinchScale > 1) {
+            this.resetMobileZoom();
+          }
+          // Don't cycle zoom levels on mobile - pinch only
+          return;
+        }
         this.zoomLevel = (this.zoomLevel + 1) % 4;
+        this.applyZoomLevel();
+      }
+
+      applyMobileZoom() {
+        this.bookletContainer.classList.add('pinch-zoom');
+        this.bookletContainer.classList.remove('pinch-zoom-release');
+        this.bookletContainer.style.transform = `translate(${this.mobilePanX}px, ${this.mobilePanY}px) scale(${this.mobilePinchScale})`;
+      }
+
+      clampMobilePan() {
+        // Limit panning so the page stays mostly visible
+        const maxPanX = (this.mobilePinchScale - 1) * window.innerWidth * 0.4;
+        const maxPanY = (this.mobilePinchScale - 1) * window.innerHeight * 0.4;
+        this.mobilePanX = Math.max(-maxPanX, Math.min(maxPanX, this.mobilePanX));
+        this.mobilePanY = Math.max(-maxPanY, Math.min(maxPanY, this.mobilePanY));
+      }
+
+      resetMobileZoom() {
+        this.mobilePinchScale = 1;
+        this.mobilePanX = 0;
+        this.mobilePanY = 0;
+        this.bookletContainer.classList.add('pinch-zoom-release');
+        this.bookletContainer.classList.remove('pinch-zoom');
+        this.bookletContainer.style.transform = '';
+        setTimeout(() => {
+          this.bookletContainer.classList.remove('pinch-zoom-release');
+        }, 300);
+        this.zoomLevel = 0;
         this.applyZoomLevel();
       }
 
@@ -2451,6 +2578,11 @@
       async turnToPage(targetPage, animate = true) {
         if (targetPage < 1 || targetPage > this.totalPages || targetPage === this.currentPage) return;
         if (this.isAnimating) return;
+
+        // Reset mobile pinch zoom on page change
+        if (this.isTouchDevice && this.mobilePinchScale > 1) {
+          this.resetMobileZoom();
+        }
 
         const goingForward = targetPage > this.currentPage;
         this.isAnimating = true;
