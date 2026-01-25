@@ -1778,8 +1778,10 @@
         this.lastTouchY = 0;
         this.lastTouchX = 0;
 
-        // Detect touch device for mobile-specific zoom behavior
-        this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        // Detect mobile device (not just touch-capable) for mobile-specific zoom behavior
+        // Desktop touchscreens should keep click-to-zoom, only phones/tablets get pinch-to-zoom
+        this.isTouchDevice = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0))
+          && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 1024);
 
         // Mobile smooth pinch zoom state
         this.mobilePinchScale = 1;
