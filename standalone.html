@@ -2579,9 +2579,18 @@
         if (targetPage < 1 || targetPage > this.totalPages || targetPage === this.currentPage) return;
         if (this.isAnimating) return;
 
-        // Reset mobile pinch zoom on page change
+        // Save and temporarily reset mobile zoom for page turn animation
+        const savedMobileScale = this.isTouchDevice ? this.mobilePinchScale : 1;
         if (this.isTouchDevice && this.mobilePinchScale > 1) {
-          this.resetMobileZoom();
+          // Zoom out smoothly for the page turn
+          this.mobilePanX = 0;
+          this.mobilePanY = 0;
+          this.mobilePinchScale = 1;
+          this.bookletContainer.classList.add('pinch-zoom-release');
+          this.bookletContainer.classList.remove('pinch-zoom');
+          this.bookletContainer.style.transform = '';
+          await new Promise(r => setTimeout(r, 300));
+          this.bookletContainer.classList.remove('pinch-zoom-release');
         }
 
         const goingForward = targetPage > this.currentPage;
@@ -2631,6 +2640,21 @@
         this.currentPage = targetPage;
         this.updateIndicator();
         this.isAnimating = false;
+
+        // Restore mobile zoom level after page turn
+        if (this.isTouchDevice && savedMobileScale > 1) {
+          this.mobilePinchScale = savedMobileScale;
+          this.mobilePanX = 0;
+          this.mobilePanY = 0;
+          this.zoomLevel = 1;
+          // Animate zoom back in
+          this.bookletContainer.classList.add('pinch-zoom-release');
+          this.bookletContainer.style.transform = `translate(0px, 0px) scale(${this.mobilePinchScale})`;
+          setTimeout(() => {
+            this.bookletContainer.classList.remove('pinch-zoom-release');
+            this.bookletContainer.classList.add('pinch-zoom');
+          }, 300);
+        }
       }
 
       async prevPage() {
